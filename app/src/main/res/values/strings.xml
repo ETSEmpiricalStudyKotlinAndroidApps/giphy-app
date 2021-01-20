@@ -10,4 +10,5 @@
     <string name="search">Search</string>
     <string name="api_key">JdTcDLYGDS60dJf83vDcu6G2P3K2Zali</string>
     <string name="fab_upload">Upload GIf</string>
+    <string name="gif_image_view">GIF Image View</string>
 </resources>
