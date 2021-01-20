@@ -1,14 +1,19 @@
 package com.giphyapp.ui
 
 import android.os.Bundle
+import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
+import androidx.lifecycle.lifecycleScope
 import com.giphyapp.R
+import com.giphyapp.api.RetrofitInstance
 import com.giphyapp.databinding.ActivityMainBinding
 import com.google.android.material.snackbar.Snackbar
+import retrofit2.HttpException
+import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
 
@@ -25,6 +30,18 @@ class MainActivity : AppCompatActivity() {
         binding.fab.setOnClickListener { view ->
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
                     .setAction("Action", null).show()
+        }
+
+        lifecycleScope.launchWhenCreated {
+            val response = try {
+                RetrofitInstance.api.getTrendingGifs()
+            }catch(e: IOException){
+                Log.e("Main activiry", "Nije OK")
+                return@launchWhenCreated
+            }catch(e: HttpException){
+                Log.e("Main activiry", "Nije OK")
+                return@launchWhenCreated
+            }
         }
     }
 
