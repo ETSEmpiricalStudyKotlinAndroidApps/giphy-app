@@ -7,10 +7,13 @@ import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
+import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.lifecycleScope
 import com.giphyapp.R
 import com.giphyapp.api.RetrofitInstance
 import com.giphyapp.databinding.ActivityMainBinding
+import com.giphyapp.db.GifDatabase
+import com.giphyapp.repository.GifsRepository
 import com.google.android.material.snackbar.Snackbar
 import retrofit2.HttpException
 import java.io.IOException
@@ -18,6 +21,7 @@ import java.io.IOException
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
+    lateinit var viewModel: GifsViewModel
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -26,6 +30,11 @@ class MainActivity : AppCompatActivity() {
 
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
+
+        val gifsRepository = GifsRepository(GifDatabase(this))
+        val viewModelProviderFactory = GifsViewModelProviderFactory(gifsRepository)
+        viewModel = ViewModelProvider(this, viewModelProviderFactory).get(GifsViewModel::class.java)
+
 
         binding.fab.setOnClickListener { view ->
             Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
