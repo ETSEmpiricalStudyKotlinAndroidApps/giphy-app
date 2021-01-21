@@ -2,6 +2,7 @@ package com.giphyapp.api
 
 import com.giphyapp.BuildConfig
 import com.giphyapp.models.GiphyResponse
+import com.giphyapp.util.Constants.Companion.NUMBER_OF_GIFS_ON_PAGE
 import retrofit2.Response
 import retrofit2.http.GET
 import retrofit2.http.Query
@@ -12,7 +13,9 @@ interface GiphyAPI {
         @Query("offset")
         offset: Int = 0,
         @Query("api_key")
-        apiKey: String = BuildConfig.GiphySecAPIKey
+        apiKey: String = BuildConfig.GiphySecAPIKey,
+        @Query("limit")
+        limit: Int = NUMBER_OF_GIFS_ON_PAGE
     ): Response<GiphyResponse>
 
     @GET("v1/gifs/search")
@@ -22,6 +25,8 @@ interface GiphyAPI {
         @Query("offset")
         offset: Int = 0,
         @Query("api_key")
-        apiKey: String = BuildConfig.GiphySecAPIKey
+        apiKey: String = BuildConfig.GiphySecAPIKey,
+        @Query("limit")
+        limit: Int = NUMBER_OF_GIFS_ON_PAGE
     ): Response<GiphyResponse>
 }

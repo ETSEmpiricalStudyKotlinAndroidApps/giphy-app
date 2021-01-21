@@ -7,21 +7,23 @@ import android.view.MenuItem
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
+import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import androidx.lifecycle.lifecycleScope
+import androidx.recyclerview.widget.LinearLayoutManager
+import androidx.recyclerview.widget.StaggeredGridLayoutManager
 import com.giphyapp.R
-import com.giphyapp.api.RetrofitInstance
+import com.giphyapp.adapters.GifAdapter
 import com.giphyapp.databinding.ActivityMainBinding
 import com.giphyapp.db.GifDatabase
 import com.giphyapp.repository.GifsRepository
+import com.giphyapp.util.Resource
 import com.google.android.material.snackbar.Snackbar
-import retrofit2.HttpException
-import java.io.IOException
 
 class MainActivity : AppCompatActivity() {
 
     private lateinit var binding: ActivityMainBinding
     lateinit var viewModel: GifsViewModel
+    lateinit var gifAdapter: GifAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -31,27 +33,39 @@ class MainActivity : AppCompatActivity() {
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
 
-        val gifsRepository = GifsRepository(GifDatabase(this))
-        val viewModelProviderFactory = GifsViewModelProviderFactory(gifsRepository)
-        viewModel = ViewModelProvider(this, viewModelProviderFactory).get(GifsViewModel::class.java)
+        setupViewModel()
+        setFABListener()
+        setupRecyclerView()
 
+        viewModel.trendingGifs.observe(this, Observer { response ->
+            when(response) {
+                is Resource.Succes -> {
+                    hideProgressBar()
+                    response.data?.let { giphyResponse ->
+                        gifAdapter.differ.submitList(giphyResponse.data)
+                    }
+                }
 
-        binding.fab.setOnClickListener { view ->
-            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
-                    .setAction("Action", null).show()
-        }
+                is Resource.Error -> {
+                    hideProgressBar()
+                    response.message?.let { message ->
+                        Log.e("Main Activity", "An error occured: $message")
+                    }
+                }
 
-        lifecycleScope.launchWhenCreated {
-            val response = try {
-                RetrofitInstance.api.getTrendingGifs()
-            }catch(e: IOException){
-                Log.e("Main activiry", "Nije OK")
-                return@launchWhenCreated
-            }catch(e: HttpException){
-                Log.e("Main activiry", "Nije OK")
-                return@launchWhenCreated
+                is Resource.Loading -> {
+                    showProgressBar()
+                }
             }
-        }
+        })
+    }
+
+    private fun hideProgressBar() {
+        //TODO("IMPLEMENT PROGRESS BAR")
+    }
+
+    private fun showProgressBar() {
+        //TODO("IMPLEMENT PROGRESS BAR")
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -74,5 +88,26 @@ class MainActivity : AppCompatActivity() {
         })
 
         return true
+    }
+
+    private fun setFABListener() {
+        binding.fab.setOnClickListener { view ->
+            Snackbar.make(view, "Replace with your own action", Snackbar.LENGTH_LONG)
+                    .setAction("Action", null).show()
+        }
+    }
+
+    private fun setupViewModel() {
+        val gifsRepository = GifsRepository(GifDatabase(this))
+        val viewModelProviderFactory = GifsViewModelProviderFactory(gifsRepository)
+        viewModel = ViewModelProvider(this, viewModelProviderFactory).get(GifsViewModel::class.java)
+    }
+
+    private fun setupRecyclerView() = binding.rvGifs.apply {
+        gifAdapter = GifAdapter(this@MainActivity)
+        adapter = gifAdapter
+        var sglm: StaggeredGridLayoutManager = StaggeredGridLayoutManager(2, LinearLayoutManager.VERTICAL)
+        //sglm.gapStrategy = StaggeredGridLayoutManager.GAP_HANDLING_NONE
+        layoutManager = sglm
     }
 }
