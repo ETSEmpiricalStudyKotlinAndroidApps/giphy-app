@@ -11,6 +11,7 @@ import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
+import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
@@ -53,11 +54,11 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun hideProgressBar() {
-        //TODO("IMPLEMENT PROGRESS BAR")
+        binding.progressBar.visibility = View.INVISIBLE
     }
 
     private fun showProgressBar() {
-        //TODO("IMPLEMENT PROGRESS BAR")
+        binding.progressBar.visibility = View.VISIBLE
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
