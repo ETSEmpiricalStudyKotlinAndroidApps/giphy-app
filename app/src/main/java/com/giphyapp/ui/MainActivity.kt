@@ -1,26 +1,28 @@
 package com.giphyapp.ui
 
+import android.content.Context
 import android.os.Bundle
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
-import android.widget.Toast
+import android.view.inputmethod.InputMethodManager
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
-import androidx.recyclerview.widget.LinearLayoutManager
-import androidx.recyclerview.widget.StaggeredGridLayoutManager
+import androidx.recyclerview.widget.GridLayoutManager
 import com.giphyapp.R
 import com.giphyapp.adapters.GifAdapter
 import com.giphyapp.databinding.ActivityMainBinding
 import com.giphyapp.db.GifDatabase
 import com.giphyapp.repository.GifsRepository
+import com.giphyapp.util.Constants.Companion.NUMBER_OF_COLUMNS
 import com.giphyapp.util.Resource
 import com.google.android.material.snackbar.Snackbar
 
 class MainActivity : AppCompatActivity() {
 
+    private var trendingGifsDisplayed = true
     private lateinit var binding: ActivityMainBinding
     lateinit var viewModel: GifsViewModel
     lateinit var gifAdapter: GifAdapter
@@ -37,7 +39,7 @@ class MainActivity : AppCompatActivity() {
         setFABListener()
         setupRecyclerView()
 
-        viewModel.trendingGifs.observe(this, Observer { response ->
+        viewModel.gifs.observe(this, Observer { response ->
             when(response) {
                 is Resource.Succes -> {
                     hideProgressBar()
@@ -72,17 +74,43 @@ class MainActivity : AppCompatActivity() {
         // Inflate the menu; this adds items to the action bar if it is present.
         menuInflater.inflate(R.menu.menu_main, menu)
 
-        val menuItem: MenuItem = menu.findItem(R.id.search)
-        val searchView : SearchView = menuItem.actionView as SearchView
+        val searchItem: MenuItem = menu.findItem(R.id.search)
+        val searchView : SearchView = searchItem.actionView as SearchView
 
         searchView.setOnQueryTextListener(object : SearchView.OnQueryTextListener{
             override fun onQueryTextChange(newText: String?): Boolean {
-                Toast.makeText(this@MainActivity,"CHANGED",Toast.LENGTH_SHORT).show()
                 return true
             }
 
             override fun onQueryTextSubmit(query: String?): Boolean {
-                Toast.makeText(this@MainActivity,"SUBMITED",Toast.LENGTH_SHORT).show()
+
+                hideKeyboard()
+
+                query?.let {
+                    if(query.toString().isNotEmpty()){
+                        trendingGifsDisplayed = false
+                        viewModel.searchNews(query.toString())
+                    }
+                }
+
+                searchItem.collapseActionView()
+
+                return true
+            }
+
+            private fun hideKeyboard(){
+                val imm = getSystemService(Context.INPUT_METHOD_SERVICE) as? InputMethodManager
+                imm?.hideSoftInputFromWindow(searchView.windowToken, 0)
+            }
+        })
+
+        val trendingItem: MenuItem = menu.findItem(R.id.trendingIcon)
+        trendingItem.setOnMenuItemClickListener(object: MenuItem.OnMenuItemClickListener{
+            override fun onMenuItemClick(item: MenuItem?): Boolean {
+                if(trendingGifsDisplayed == false){
+                    trendingGifsDisplayed = true
+                    viewModel.getTrendingGifs()
+                }
                 return true
             }
         })
@@ -106,8 +134,6 @@ class MainActivity : AppCompatActivity() {
     private fun setupRecyclerView() = binding.rvGifs.apply {
         gifAdapter = GifAdapter(this@MainActivity)
         adapter = gifAdapter
-        var sglm: StaggeredGridLayoutManager = StaggeredGridLayoutManager(2, LinearLayoutManager.VERTICAL)
-        //sglm.gapStrategy = StaggeredGridLayoutManager.GAP_HANDLING_NONE
-        layoutManager = sglm
+        layoutManager = GridLayoutManager(this@MainActivity, NUMBER_OF_COLUMNS)
     }
 }

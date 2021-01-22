@@ -16,4 +16,10 @@ class GifsRepository(
         return RetrofitInstance.api
                 .getTrendingGifs(offset)
     }
+
+    suspend fun searchGifs(searchQuery: String, page:Int = 1): Response<GiphyResponse> {
+        val offset: Int = (page - 1) * NUMBER_OF_GIFS_ON_PAGE
+
+        return RetrofitInstance.api.searchGifs(searchQuery, offset)
+    }
 }

@@ -8,4 +8,9 @@
         android:title="@string/search"
         app:showAsAction="ifRoom|collapseActionView"
         app:actionViewClass="androidx.appcompat.widget.SearchView"/>
+    <item
+        android:id="@+id/trendingIcon"
+        android:icon="@drawable/ic_baseline_local_fire_department_24"
+        android:title="Trending"
+        app:showAsAction="ifRoom|collapseActionView"/>
 </menu>

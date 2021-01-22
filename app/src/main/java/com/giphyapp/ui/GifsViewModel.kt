@@ -13,21 +13,27 @@ class GifsViewModel(
         val  gifsRepository: GifsRepository
 ) : ViewModel() {
 
-    val trendingGifs: MutableLiveData<Resource<GiphyResponse>> = MutableLiveData()
+    val gifs: MutableLiveData<Resource<GiphyResponse>> = MutableLiveData()
 
-    val trendingGifsPage = 1
+    val gifsPage = 1
 
     init {
         getTrendingGifs();
     }
 
     fun getTrendingGifs() = viewModelScope.launch {
-        trendingGifs.postValue(Resource.Loading())
-        val response = gifsRepository.getTrendingGifs(trendingGifsPage)
-        trendingGifs.postValue(handleTrendingGifsResponse(response))
+        gifs.postValue(Resource.Loading())
+        val response = gifsRepository.getTrendingGifs(gifsPage)
+        gifs.postValue(handleGifsResponse(response))
     }
 
-    private fun handleTrendingGifsResponse(response: Response<GiphyResponse>): Resource<GiphyResponse> {
+    fun searchNews(searchQuery: String) = viewModelScope.launch{
+        gifs.postValue(Resource.Loading())
+        val response = gifsRepository.searchGifs(searchQuery, gifsPage)
+        gifs.postValue(handleGifsResponse(response))
+    }
+
+    private fun handleGifsResponse(response: Response<GiphyResponse>): Resource<GiphyResponse> {
         if(response.isSuccessful){
             response.body()?.let{ resultResponse ->
                 return Resource.Succes(resultResponse)
