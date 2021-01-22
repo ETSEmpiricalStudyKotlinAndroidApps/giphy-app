@@ -1,6 +1,7 @@
 package com.giphyapp.repository
 
 import com.giphyapp.api.RetrofitInstance
+import com.giphyapp.api.UploadRetrofitInstance
 import com.giphyapp.db.GifDatabase
 import com.giphyapp.models.GiphyResponse
 import com.giphyapp.util.Constants.Companion.NUMBER_OF_GIFS_ON_PAGE
@@ -22,4 +23,6 @@ class GifsRepository(
 
         return RetrofitInstance.api.searchGifs(searchQuery, offset)
     }
+
+    suspend fun uploadGif(fileBinary: String) = UploadRetrofitInstance.api.uploadGif(fileBinary)
 }
