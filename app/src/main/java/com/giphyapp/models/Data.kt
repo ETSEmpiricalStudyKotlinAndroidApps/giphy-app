@@ -1,6 +1,7 @@
 package com.giphyapp.models
 
 data class Data(
+    //TODO("REMOVE COMMENT OR DELETE")
     //val analytics: Analytics,
     //val analytics_response_payload: String,
     //val bitly_gif_url: String,

@@ -29,7 +29,7 @@ class GifsRepository(
 
     suspend fun upsert(gif: Gif) = db.getGifDao().upsert(gif)
 
-    fun getTrendingGifs() = db.getGifDao().getGifs()
+    fun getSavedGifs() = db.getGifDao().getGifs()
 
     suspend fun deleteAll() = db.getGifDao().deleteAll()
 }

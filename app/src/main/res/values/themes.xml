@@ -15,6 +15,7 @@
         <item name="android:editTextColor">@color/red</item>
         <item name="android:textColorHint">@color/red</item>
         <item name="fontFamily">@font/sofia_pro_medium_az</item>
+        <item name="windowActionBar">false</item>
     </style>
 
     <style name="Theme.GiphyApp.NoActionBar">
@@ -25,4 +26,9 @@
     <style name="Theme.GiphyApp.AppBarOverlay" parent="ThemeOverlay.AppCompat.Dark.ActionBar" />
 
     <style name="Theme.GiphyApp.PopupOverlay" parent="ThemeOverlay.AppCompat.Light" />
+
+    <style name="splashScreenTheme" parent="Theme.MaterialComponents.Light.NoActionBar">
+        <item name="android:windowBackground">@drawable/splash_screen</item>
+        <item name="android:statusBarColor">@color/black</item>
+    </style>
 </resources>

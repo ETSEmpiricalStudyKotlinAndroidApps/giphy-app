@@ -1,6 +1,7 @@
 package com.giphyapp.models
 
 data class Images(
+    //TODO("REMOVE COMMENT OR DELETE")
     //val `480w_still`: WStill,
     //val `4k`: K,
     val downsized: Downsized,

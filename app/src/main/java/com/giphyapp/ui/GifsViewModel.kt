@@ -4,20 +4,23 @@ import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.giphyapp.models.Data
 import com.giphyapp.models.GiphyResponse
 import com.giphyapp.repository.GifsRepository
 import com.giphyapp.util.Resource
 import kotlinx.coroutines.launch
 import retrofit2.Response
 
+
 class GifsViewModel(
-        val  gifsRepository: GifsRepository
+
+        val gifsRepository: GifsRepository
 ) : ViewModel() {
 
     val gifs: MutableLiveData<Resource<GiphyResponse>> = MutableLiveData()
 
-    val gifsPage = 1
+    var gifsPage = 1
+    var firstTimeSavingGifs = true;
+    var gifsResponse: GiphyResponse? = null
 
     init {
         getTrendingGifs();
@@ -41,21 +44,27 @@ class GifsViewModel(
         Log.e("VIEWMODEL", response.message())
     }
 
-    fun saveGif(data: Data) = viewModelScope.launch {
+    fun getSavedGifs() = gifsRepository.getSavedGifs()
 
-        //val gif: Gif = saveGifToStorage(data.images.downsized.url)
-
-        //gifsRepository.upsert(gif)
+    fun deleteAllGifs() = viewModelScope.launch {
+        gifsRepository.deleteAll()
     }
-
-    //private fun saveGifToStorage(url: String): Gif {
-        //TODO("IMPLEMEMENT SAVING GIF TO EXTERNAL STORAGE")
-    //}
 
     private fun handleGifsResponse(response: Response<GiphyResponse>): Resource<GiphyResponse> {
         if(response.isSuccessful){
             response.body()?.let{ resultResponse ->
-                return Resource.Succes(resultResponse)
+                gifsPage++
+
+                if(gifsResponse == null){
+                    // If the first page is being loaded
+                    gifsResponse = resultResponse
+                }else{
+                    // If any page is being loaded other than first - merging gifs from different pages
+                    val oldGifs = gifsResponse?.data
+                    val newGifs = resultResponse.data
+                    oldGifs?.addAll(newGifs)
+                }
+                return Resource.Succes(gifsResponse?:resultResponse)
             }
         }
         return Resource.Error(response.message())

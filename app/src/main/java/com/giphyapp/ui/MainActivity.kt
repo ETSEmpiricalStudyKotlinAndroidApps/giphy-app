@@ -6,6 +6,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
 import android.graphics.BitmapFactory
+import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -13,23 +14,31 @@ import android.view.Menu
 import android.view.MenuItem
 import android.view.View
 import android.view.inputmethod.InputMethodManager
+import android.widget.AbsListView
 import android.widget.Toast
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.GridLayoutManager
+import androidx.recyclerview.widget.RecyclerView
+import com.bumptech.glide.Glide
 import com.giphyapp.R
 import com.giphyapp.adapters.GifAdapter
 import com.giphyapp.databinding.ActivityMainBinding
 import com.giphyapp.db.GifDatabase
+import com.giphyapp.models.Data
 import com.giphyapp.repository.GifsRepository
+import com.giphyapp.util.Constants.Companion.EMPTY_LAST_PAGE_LOSS
 import com.giphyapp.util.Constants.Companion.GIF_PICK_CODE
+import com.giphyapp.util.Constants.Companion.INTEGER_DIVISION_PAGE_LOSS
 import com.giphyapp.util.Constants.Companion.NUMBER_OF_COLUMNS
-import com.giphyapp.util.Constants.Companion.PERMISION_CODE
+import com.giphyapp.util.Constants.Companion.NUMBER_OF_GIFS_ON_PAGE
+import com.giphyapp.util.Constants.Companion.PERMISSION_CODE_READ_EXTERNAL
+import com.giphyapp.util.Constants.Companion.PERMISSION_CODE_WRITE_EXTERNAL
 import com.giphyapp.util.Resource
-import java.io.ByteArrayOutputStream
-import java.io.InputStream
+import kotlinx.coroutines.*
+import java.io.*
 import kotlin.experimental.and
 
 
@@ -57,10 +66,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun hideProgressBar() {
         binding.progressBar.visibility = View.INVISIBLE
+        isLoading = false
     }
 
     private fun showProgressBar() {
         binding.progressBar.visibility = View.VISIBLE
+        isLoading = true
     }
 
     override fun onCreateOptionsMenu(menu: Menu): Boolean {
@@ -81,6 +92,7 @@ class MainActivity : AppCompatActivity() {
 
                 query?.let {
                     if (query.toString().isNotEmpty()) {
+                        restartPagination()
                         trendingGifsDisplayed = false
                         lastSearch = query.toString()
                         viewModel.searchGifs(query.toString())
@@ -103,6 +115,7 @@ class MainActivity : AppCompatActivity() {
             override fun onMenuItemClick(item: MenuItem?): Boolean {
                 if (trendingGifsDisplayed == false) {
                     trendingGifsDisplayed = true
+                    restartPagination()
                     viewModel.getTrendingGifs()
                 }
                 return true
@@ -114,6 +127,9 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupPullToRefresh() {
         binding.swipeRefreshLayout.setOnRefreshListener{
+
+            restartPagination()
+
             if(trendingGifsDisplayed == true){
                 viewModel.getTrendingGifs()
             }else{
@@ -130,7 +146,7 @@ class MainActivity : AppCompatActivity() {
             if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
                             == PackageManager.PERMISSION_DENIED){
                         var permissions: Array<String> = arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-                        requestPermissions(permissions, PERMISION_CODE)
+                        requestPermissions(permissions, PERMISSION_CODE_READ_EXTERNAL)
                         Log.e("MAIN ACATIVIY", "PERMISSION REQUESTED")
                     }else{
                         pickGifFromGallery()
@@ -157,7 +173,14 @@ class MainActivity : AppCompatActivity() {
                 is Resource.Succes -> {
                     hideProgressBar()
                     response.data?.let { giphyResponse ->
-                        gifAdapter.differ.submitList(giphyResponse.data)
+                        gifAdapter.differ.submitList(giphyResponse.data.toList())
+
+                        val totalPages = giphyResponse.pagination.total_count / NUMBER_OF_GIFS_ON_PAGE +
+                                INTEGER_DIVISION_PAGE_LOSS + EMPTY_LAST_PAGE_LOSS
+
+                        isLastPage = viewModel.gifsPage == totalPages
+
+                        //checkExternalWritePermissions()
                     }
                 }
 
@@ -175,23 +198,107 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
+    private fun saveListOfGifsInDB(data: List<Data>) {
+
+        //Save gifs in DB only one time
+        if(viewModel.firstTimeSavingGifs == true){
+            viewModel.firstTimeSavingGifs = false
+            for(gif in data){
+                saveGifInDB(gif.images.downsized
+                        .url)
+            }
+        }
+    }
+
     private fun setupRecyclerView() = binding.rvGifs.apply {
         gifAdapter = GifAdapter(this@MainActivity)
         adapter = gifAdapter
         layoutManager = GridLayoutManager(this@MainActivity, NUMBER_OF_COLUMNS)
+        addOnScrollListener(this@MainActivity.scrollListener)
     }
 
+    // Checking permissions needed for writing on external storage
+    private fun checkExternalWritePermissions(){
+
+        if(checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                == PackageManager.PERMISSION_DENIED){
+            var permissions: Array<String> = arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+            //TODO("IF SAVING TO EXTERNAL STORAGE DOESNT WORK, CHECK ACCES NETWORK PERMISSION MAYBE")
+            requestPermissions(permissions, PERMISSION_CODE_WRITE_EXTERNAL)
+            Log.e("MAIN ACATIVIY", "PERMISSION REQUESTED")
+        }else{
+            saveListOfGifsInDB(gifAdapter.gifs)
+        }
+    }
+
+    private fun saveGifInDB(url: String) = CoroutineScope(Dispatchers.IO).launch {
+        saveGifOnStorage(Glide.with(this@MainActivity)
+                .asBitmap()
+                .load(url)
+                .submit()
+                .get())
+
+                //TODO("SAVE IN DB")
+
+    }
+
+    fun saveGifOnStorage(image: Bitmap) : String? {
+        var savedImagePath: String? = null
+        val imageFileName = System.currentTimeMillis().toString() + ".jpg"
+        val storageDir = File(this.getExternalFilesDir(null), "Giphy")
+        var success = true
+        if (!storageDir.exists()) {
+            success = storageDir.mkdirs()
+        }
+        if (success) {
+            val imageFile = File(storageDir, imageFileName)
+            savedImagePath = imageFile.getAbsolutePath()
+            try {
+                val fOut: OutputStream = FileOutputStream(imageFile)
+                image.compress(Bitmap.CompressFormat.JPEG, 100, fOut)
+                fOut.close()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+
+            // Add the image to the system gallery
+            // galleryAddPic(savedImagePath)
+            //Toast.makeText(this, "IMAGE SAVED", Toast.LENGTH_LONG).show() // to make this working, need to manage coroutine, as this execution is something off the main thread
+            Log.e("VIEWMODEL", savedImagePath)
+        }
+        return savedImagePath
+    }
+
+    private fun galleryAddPic(imagePath: String?) {
+        imagePath?.let { path ->
+            val file = File(path)
+            MediaScannerConnection.scanFile(this, arrayOf(file.toString()),
+                    arrayOf(file.getName()), MediaScannerConnection.OnScanCompletedListener { path, uri ->
+                Log.e("EXTERNAL PATH ", path!!)
+                Log.e("EXTERNAL URI", uri!!.toString())
+            })
+        }
+    }
 
     // Handle permission result
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
 
         when(requestCode){
-            PERMISION_CODE -> {
+            PERMISSION_CODE_READ_EXTERNAL -> {
                 if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     pickGifFromGallery()
                 } else {
                     Toast
                             .makeText(this@MainActivity, "I don't have the permission to access your gallery", Toast.LENGTH_SHORT)
+                            .show()
+                }
+            }
+            PERMISSION_CODE_WRITE_EXTERNAL -> {
+                if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    saveListOfGifsInDB(gifAdapter.gifs)
+                } else {
+                    Toast
+                            .makeText(this@MainActivity, "I don't have the permission to access your storage", Toast.LENGTH_SHORT)
                             .show()
                 }
             }
@@ -207,9 +314,7 @@ class MainActivity : AppCompatActivity() {
 
             Log.e("MAIN ACTIVITY", data.data.toString())
 
-
-
-
+            //TODO("UPLOAD IMAGE?")
 
             // Convert gif to binary
             val uri: Uri = data.data!!
@@ -247,5 +352,48 @@ class MainActivity : AppCompatActivity() {
         }
 
         super.onActivityResult(requestCode, resultCode, data)
+    }
+
+    // Pagination
+    var isLoading = false
+    var isLastPage = false
+    var isScrolling = false
+    val scrollListener = object : RecyclerView.OnScrollListener() {
+        override fun onScrollStateChanged(recyclerView: RecyclerView, newState: Int) {
+            super.onScrollStateChanged(recyclerView, newState)
+            if(newState == AbsListView.OnScrollListener.SCROLL_STATE_TOUCH_SCROLL){
+                isScrolling = true
+            }
+        }
+
+        override fun onScrolled(recyclerView: RecyclerView, dx: Int, dy: Int) {
+            super.onScrolled(recyclerView, dx, dy)
+
+            val layoutManager = recyclerView.layoutManager as GridLayoutManager
+            val firstVisibleItemPosition = layoutManager.findFirstVisibleItemPosition()
+            val visibleItemCount = layoutManager.childCount
+            val totalItemCount = layoutManager.itemCount
+
+            val isNotLoadingAndNotAtTheLastPage = !isLoading && !isLastPage
+            val isAtLastItem = firstVisibleItemPosition + visibleItemCount >= totalItemCount
+            val isNotAtBeginning = firstVisibleItemPosition >= 0
+            val isTotalMoreThanVisible = totalItemCount >= NUMBER_OF_GIFS_ON_PAGE
+            val shouldPaginate = isNotLoadingAndNotAtTheLastPage && isAtLastItem && isNotAtBeginning &&
+                    isTotalMoreThanVisible && isScrolling
+
+            if(shouldPaginate) {
+                if(trendingGifsDisplayed){
+                    viewModel.getTrendingGifs()
+                }else{
+                    viewModel.searchGifs(lastSearch)
+                }
+                isScrolling = false
+            }
+        }
+    }
+
+    private fun restartPagination(){
+        viewModel.gifsPage = 1
+        viewModel.gifsResponse = null
     }
 }
