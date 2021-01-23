@@ -36,6 +36,7 @@ import kotlin.experimental.and
 class MainActivity : AppCompatActivity() {
 
     private var trendingGifsDisplayed = true
+    private lateinit var lastSearch: String
     private lateinit var binding: ActivityMainBinding
     lateinit var viewModel: GifsViewModel
     lateinit var gifAdapter: GifAdapter
@@ -51,6 +52,7 @@ class MainActivity : AppCompatActivity() {
         setupViewModel()
         setFABListener()
         setupRecyclerView()
+        setupPullToRefresh()
     }
 
     private fun hideProgressBar() {
@@ -80,7 +82,8 @@ class MainActivity : AppCompatActivity() {
                 query?.let {
                     if (query.toString().isNotEmpty()) {
                         trendingGifsDisplayed = false
-                        viewModel.searchNews(query.toString())
+                        lastSearch = query.toString()
+                        viewModel.searchGifs(query.toString())
                     }
                 }
 
@@ -107,6 +110,18 @@ class MainActivity : AppCompatActivity() {
         })
 
         return true
+    }
+
+    private fun setupPullToRefresh() {
+        binding.swipeRefreshLayout.setOnRefreshListener{
+            if(trendingGifsDisplayed == true){
+                viewModel.getTrendingGifs()
+            }else{
+                viewModel.searchGifs(lastSearch)
+            }
+
+            binding.swipeRefreshLayout.isRefreshing = false
+        }
     }
 
     private fun setFABListener() {

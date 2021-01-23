@@ -28,7 +28,7 @@ class GifsViewModel(
         gifs.postValue(handleGifsResponse(response))
     }
 
-    fun searchNews(searchQuery: String) = viewModelScope.launch{
+    fun searchGifs(searchQuery: String) = viewModelScope.launch{
         gifs.postValue(Resource.Loading())
         val response = gifsRepository.searchGifs(searchQuery, gifsPage)
         gifs.postValue(handleGifsResponse(response))
