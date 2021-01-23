@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.giphyapp.models.Data
 import com.giphyapp.models.GiphyResponse
 import com.giphyapp.repository.GifsRepository
 import com.giphyapp.util.Resource
@@ -39,6 +40,17 @@ class GifsViewModel(
         //TODO("Must somehow show response")
         Log.e("VIEWMODEL", response.message())
     }
+
+    fun saveGif(data: Data) = viewModelScope.launch {
+
+        //val gif: Gif = saveGifToStorage(data.images.downsized.url)
+
+        //gifsRepository.upsert(gif)
+    }
+
+    //private fun saveGifToStorage(url: String): Gif {
+        //TODO("IMPLEMEMENT SAVING GIF TO EXTERNAL STORAGE")
+    //}
 
     private fun handleGifsResponse(response: Response<GiphyResponse>): Resource<GiphyResponse> {
         if(response.isSuccessful){

@@ -40,7 +40,10 @@ class GifAdapter(var context: Context) : RecyclerView.Adapter<GifAdapter.GifView
     override fun onBindViewHolder(holder: GifViewHolder, position: Int) {
         holder.binding.apply {
             val gif = gifs[position]
-            Glide.with(context).load(gif.images.downsized.url).into(ivGif)
+            Glide.with(context)
+                    .load(gif.images.downsized.url)
+                    .thumbnail(Glide.with(context).load(gif.images.original_still.url))
+                    .into(ivGif)
             setOnItemClickListener {
                 onItemClickListener?.let { it(gif) }
             }

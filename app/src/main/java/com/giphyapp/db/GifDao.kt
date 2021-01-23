@@ -14,4 +14,7 @@ interface GifDao{
 
     @Query("SELECT * FROM gifs")
     fun getGifs(): LiveData<List<Gif>>
+
+    @Query("DELETE FROM gifs")
+    suspend fun deleteAll()
 }
