@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.Bitmap
-import android.graphics.BitmapFactory
 import android.media.MediaScannerConnection
 import android.net.Uri
 import android.os.Bundle
@@ -28,6 +27,7 @@ import com.giphyapp.adapters.GifAdapter
 import com.giphyapp.databinding.ActivityMainBinding
 import com.giphyapp.db.GifDatabase
 import com.giphyapp.models.Data
+import com.giphyapp.models.Gif
 import com.giphyapp.repository.GifsRepository
 import com.giphyapp.util.Constants.Companion.EMPTY_LAST_PAGE_LOSS
 import com.giphyapp.util.Constants.Companion.GIF_PICK_CODE
@@ -39,7 +39,6 @@ import com.giphyapp.util.Constants.Companion.PERMISSION_CODE_WRITE_EXTERNAL
 import com.giphyapp.util.Resource
 import kotlinx.coroutines.*
 import java.io.*
-import kotlin.experimental.and
 
 
 class MainActivity : AppCompatActivity() {
@@ -61,7 +60,20 @@ class MainActivity : AppCompatActivity() {
         setupViewModel()
         setFABListener()
         setupRecyclerView()
+        setGifOnClickListener()
         setupPullToRefresh()
+    }
+
+    private fun setGifOnClickListener() {
+        gifAdapter.setOnItemClickListener {
+
+            Log.e("LISTENER", "YEESSSSSSSS")
+
+            val i: Intent = Intent(this, FullscreenActivity::class.java)
+            i.putExtra("url",it.images.downsized.url)
+            i.putExtra("thumbnail", it.images.original_still.url)
+            startActivity(i)
+        }
     }
 
     private fun hideProgressBar() {
@@ -117,6 +129,17 @@ class MainActivity : AppCompatActivity() {
                     trendingGifsDisplayed = true
                     restartPagination()
                     viewModel.getTrendingGifs()
+                }else{
+                    /*
+                    val lista = viewModel.getSavedGifs()
+
+                    if(lista!=null){
+                        for(list in lista){
+                            Log.e("LISTAA", list.id!!.toString() + " " + list.pathToGif)
+                        }
+                    }
+
+                    */
                 }
                 return true
             }
@@ -158,7 +181,7 @@ class MainActivity : AppCompatActivity() {
     private fun pickGifFromGallery() {
         // Intent to pick gif from gallery
         var intent: Intent = Intent(Intent.ACTION_PICK)
-        intent.setType("image/* video/*")
+        intent.setType("image/*")
 
         startActivityForResult(intent, GIF_PICK_CODE)
     }
@@ -180,7 +203,7 @@ class MainActivity : AppCompatActivity() {
 
                         isLastPage = viewModel.gifsPage == totalPages
 
-                        //checkExternalWritePermissions()
+                        checkExternalWritePermissions()
                     }
                 }
 
@@ -237,14 +260,11 @@ class MainActivity : AppCompatActivity() {
                 .load(url)
                 .submit()
                 .get())
-
-                //TODO("SAVE IN DB")
-
     }
 
     fun saveGifOnStorage(image: Bitmap) : String? {
         var savedImagePath: String? = null
-        val imageFileName = System.currentTimeMillis().toString() + ".jpg"
+        val imageFileName = System.currentTimeMillis().toString() + ".gif"
         val storageDir = File(this.getExternalFilesDir(null), "Giphy")
         var success = true
         if (!storageDir.exists()) {
@@ -260,6 +280,10 @@ class MainActivity : AppCompatActivity() {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+
+            // Save in DB
+            val gif = Gif(pathToGif = savedImagePath)
+            viewModel.saveGif(gif)
 
             // Add the image to the system gallery
             // galleryAddPic(savedImagePath)
@@ -313,42 +337,37 @@ class MainActivity : AppCompatActivity() {
         if(resultCode == RESULT_OK && requestCode == GIF_PICK_CODE && data!=null && data.data!=null){
 
             Log.e("MAIN ACTIVITY", data.data.toString())
-
-            //TODO("UPLOAD IMAGE?")
-
             // Convert gif to binary
             val uri: Uri = data.data!!
 
-            val iStream: InputStream? = contentResolver.openInputStream(uri)
+            /*val i:Intent = Intent(this, FullscreenActivity::class.java)
+            i.putExtra("uri",uri)
+            startActivity(i)*/
+
+            /*val iStream: InputStream? = contentResolver.openInputStream(uri)
             val bitmap = BitmapFactory.decodeStream(iStream)
-            iStream?.close()
-
-            /*var outputStream =  ByteArrayOutputStream()
-            var inputStream = this@MainActivity?.contentResolver.openInputStream(uri)
-            var fileBinary = inputStream?.readBytes()*/
+            iStream?.close()*/
 
 
-            val stream = ByteArrayOutputStream()
+            val inputStream = this@MainActivity?.contentResolver.openInputStream(uri)
+            val fileBinary = inputStream?.readBytes()
+
+
+            /*val stream = ByteArrayOutputStream()
             bitmap.compress(Bitmap.CompressFormat.PNG, 90, stream)
-            val fileBinary = stream.toByteArray()
+            val fileBinary = stream.toByteArray()*/
 
-            Log.e("MAIN ACTIVITY", fileBinary.toString())
-            Log.e("MAIN ACTIVITY", fileBinary.toString())
+            /*val file: File = File(uri.path)
+            val fileBinary = file.readBytes()*/
 
-            var s: String = ""
+            //val file = File(uri.path!!)
 
-            Log.e("MAIN ACTIVITY BEGIN", fileBinary?.size.toString())
+            //Log.e("PLEASEEEE",uri.path!!)
 
-            val sb = StringBuilder()
-
-            for(byte in fileBinary!!){
-                sb.append(String.format("%8s", Integer.toBinaryString(((byte and 0xFF.toByte()).toInt()))).replace(' ', '0'))
-            }
-
-            Log.e("MAIN ACTIVITY FINAL", sb.toString())
+            //val fileBinary: RequestBody = file.asRequestBody("application/octet-stream;charset=utf-8".toMediaTypeOrNull())
 
             // Upload to giphy
-            viewModel.uploadGif(sb.toString())
+            viewModel.uploadGif(fileBinary!!)
         }
 
         super.onActivityResult(requestCode, resultCode, data)

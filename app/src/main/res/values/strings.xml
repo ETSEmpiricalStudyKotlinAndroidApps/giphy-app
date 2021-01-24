@@ -11,4 +11,7 @@
     <string name="api_key">JdTcDLYGDS60dJf83vDcu6G2P3K2Zali</string>
     <string name="fab_upload">Upload GIf</string>
     <string name="gif_image_view">GIF Image View</string>
+    <string name="upload">Upload</string>
+    <string name="sd_card">SD card</string>
+    <string name="home">Home</string>
 </resources>

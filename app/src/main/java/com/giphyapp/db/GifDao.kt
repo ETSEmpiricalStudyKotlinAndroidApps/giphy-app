@@ -1,6 +1,5 @@
 package com.giphyapp.db
 
-import androidx.lifecycle.LiveData
 import androidx.room.Dao
 import androidx.room.Insert
 import androidx.room.OnConflictStrategy
@@ -13,7 +12,7 @@ interface GifDao{
     suspend fun upsert(gif: Gif): Long
 
     @Query("SELECT * FROM gifs")
-    fun getGifs(): LiveData<List<Gif>>
+    fun getGifs(): List<Gif>
 
     @Query("DELETE FROM gifs")
     suspend fun deleteAll()

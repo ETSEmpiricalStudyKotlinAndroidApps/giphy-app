@@ -25,7 +25,7 @@ class GifsRepository(
         return RetrofitInstance.api.searchGifs(searchQuery, offset)
     }
 
-    suspend fun uploadGif(fileBinary: String) = UploadRetrofitInstance.api.uploadGif(fileBinary)
+    suspend fun uploadGif(fileBinary: ByteArray) = UploadRetrofitInstance.api.uploadGif(fileBinary)
 
     suspend fun upsert(gif: Gif) = db.getGifDao().upsert(gif)
 

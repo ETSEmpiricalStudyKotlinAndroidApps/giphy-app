@@ -10,6 +10,5 @@ import androidx.room.PrimaryKey
 data class Gif (
     @PrimaryKey(autoGenerate = true)
     var id: Int? = null,
-    val pathToGif: String,
-    val createdAt: String
+    val pathToGif: String
 )

@@ -4,6 +4,7 @@ import android.util.Log
 import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.giphyapp.models.Gif
 import com.giphyapp.models.GiphyResponse
 import com.giphyapp.repository.GifsRepository
 import com.giphyapp.util.Resource
@@ -38,10 +39,14 @@ class GifsViewModel(
         gifs.postValue(handleGifsResponse(response))
     }
 
-    fun uploadGif(fileBinary: String) = viewModelScope.launch{
+    fun uploadGif(fileBinary: ByteArray) = viewModelScope.launch{
         val response = gifsRepository.uploadGif(fileBinary)
         //TODO("Must somehow show response")
         Log.e("VIEWMODEL", response.message())
+    }
+
+    fun saveGif(gif: Gif) = viewModelScope.launch {
+        gifsRepository.upsert(gif)
     }
 
     fun getSavedGifs() = gifsRepository.getSavedGifs()
