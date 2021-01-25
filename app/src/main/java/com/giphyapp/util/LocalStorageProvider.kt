@@ -1,8 +1,4 @@
-package com.giphyapp.util
-//
-//
-//import androidx.core.content.ContextCompat
-//import com.giphyapp.BuildConfig
+//package com.ianhanniballake.localstorage
 //
 //import android.Manifest
 //import android.annotation.SuppressLint
@@ -26,8 +22,8 @@ package com.giphyapp.util
 //import android.support.v4.os.EnvironmentCompat
 //import android.util.Log
 //import android.webkit.MimeTypeMap
+//import androidx.core.content.ContextCompat
 //import androidx.core.os.EnvironmentCompat
-//import com.giphyapp.R
 //import java.io.File
 //import java.io.FileNotFoundException
 //import java.io.FileOutputStream
@@ -37,62 +33,44 @@ package com.giphyapp.util
 //
 //    companion object {
 //        private const val TAG = "LocalStorageProvider"
-//        /*
-//
-//*/
-///**
+//        /**
 //         * Default root projection: everything but Root.COLUMN_MIME_TYPES
-//         *//*
-//*/
-///*
-//
+//         */
 //        private val DEFAULT_ROOT_PROJECTION = arrayOf(
-//                Root.COLUMN_ROOT_ID,
-//                Root.COLUMN_SUMMARY,
-//                Root.COLUMN_FLAGS,
-//                Root.COLUMN_TITLE,
-//                Root.COLUMN_DOCUMENT_ID,
-//                Root.COLUMN_ICON,
-//                Root.COLUMN_AVAILABLE_BYTES)
-//        *//*
-//
-//*/
-///**
+//            Root.COLUMN_ROOT_ID,
+//            Root.COLUMN_SUMMARY,
+//            Root.COLUMN_FLAGS,
+//            Root.COLUMN_TITLE,
+//            Root.COLUMN_DOCUMENT_ID,
+//            Root.COLUMN_ICON,
+//            Root.COLUMN_AVAILABLE_BYTES)
+//        /**
 //         * Default document projection: everything but Document.COLUMN_ICON and Document.COLUMN_SUMMARY
-//         *//*
-//*/
-///*
-//
+//         */
 //        private val DEFAULT_DOCUMENT_PROJECTION = arrayOf(
-//                Document.COLUMN_DOCUMENT_ID,
-//                Document.COLUMN_DISPLAY_NAME,
-//                Document.COLUMN_FLAGS,
-//                Document.COLUMN_MIME_TYPE,
-//                Document.COLUMN_SIZE,
-//                Document.COLUMN_LAST_MODIFIED)
+//            Document.COLUMN_DOCUMENT_ID,
+//            Document.COLUMN_DISPLAY_NAME,
+//            Document.COLUMN_FLAGS,
+//            Document.COLUMN_MIME_TYPE,
+//            Document.COLUMN_SIZE,
+//            Document.COLUMN_LAST_MODIFIED)
 //
-//        *//*
-//
-//*/
-///**
+//        /**
 //         * Check to see if we are missing the Storage permission group. In those cases, we cannot
 //         * access local files and must invalidate any root URIs currently available.
 //         *
 //         * @param context The current Context
 //         * @return whether the permission has been granted it is safe to proceed
-//         *//*
-//*/
-///*
-//
+//         */
 //        internal fun isMissingPermission(context: Context?): Boolean {
 //            if (context == null) {
 //                return true
 //            }
 //            if (ContextCompat.checkSelfPermission(context,
-//                            Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+//                    Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
 //                // Make sure that our root is invalidated as apparently we lost permission
 //                context.contentResolver.notifyChange(
-//                        DocumentsContract.buildRootsUri(BuildConfig.DOCUMENTS_AUTHORITY), null)
+//                    DocumentsContract.buildRootsUri(BuildConfig.DOCUMENTS_AUTHORITY), null)
 //                return true
 //            }
 //            return false
@@ -103,7 +81,7 @@ package com.giphyapp.util
 //    override fun queryRoots(projection: Array<String>?): Cursor? {
 //        val context = context ?: return null
 //        if (ContextCompat.checkSelfPermission(context, Manifest.permission.WRITE_EXTERNAL_STORAGE)
-//                != PackageManager.PERMISSION_GRANTED) {
+//            != PackageManager.PERMISSION_GRANTED) {
 //            return null
 //        }
 //        // Create a cursor with either the requested fields, or the default projection if "projection" is null.
@@ -128,7 +106,7 @@ package com.giphyapp.util
 //        val sdCard = File("/storage/extSdCard")
 //        val storageState = EnvironmentCompat.getStorageState(sdCard)
 //        if (storageState == Environment.MEDIA_MOUNTED ||
-//                storageState == Environment.MEDIA_MOUNTED_READ_ONLY) {
+//            storageState == Environment.MEDIA_MOUNTED_READ_ONLY) {
 //            val row = result.newRow()
 //            // These columns are required
 //            row.add(Root.COLUMN_ROOT_ID, sdCard.absolutePath)
@@ -144,9 +122,9 @@ package com.giphyapp.util
 //    }
 //
 //    override fun createDocument(
-//            parentDocumentId: String,
-//            mimeType: String,
-//            displayName: String
+//        parentDocumentId: String,
+//        mimeType: String,
+//        displayName: String
 //    ): String? {
 //        if (LocalStorageProvider.isMissingPermission(context)) {
 //            return null
@@ -167,9 +145,9 @@ package com.giphyapp.util
 //
 //    @Throws(FileNotFoundException::class)
 //    override fun openDocumentThumbnail(
-//            documentId: String,
-//            sizeHint: Point,
-//            signal: CancellationSignal?
+//        documentId: String,
+//        sizeHint: Point,
+//        signal: CancellationSignal?
 //    ): AssetFileDescriptor? {
 //        val context = context ?: return null
 //        if (LocalStorageProvider.isMissingPermission(context)) {
@@ -209,7 +187,7 @@ package com.giphyapp.util
 //        // It appears the Storage Framework UI caches these results quite aggressively so there is little reason to
 //        // write your own caching layer beyond what you need to return a single AssetFileDescriptor
 //        return AssetFileDescriptor(ParcelFileDescriptor.open(tempFile, ParcelFileDescriptor.MODE_READ_ONLY), 0,
-//                AssetFileDescriptor.UNKNOWN_LENGTH)
+//            AssetFileDescriptor.UNKNOWN_LENGTH)
 //    }
 //
 //    override fun isChildDocument(parentDocumentId: String, documentId: String): Boolean {
@@ -217,9 +195,9 @@ package com.giphyapp.util
 //    }
 //
 //    override fun queryChildDocuments(
-//            parentDocumentId: String,
-//            projection: Array<String>?,
-//            sortOrder: String?
+//        parentDocumentId: String,
+//        projection: Array<String>?,
+//        sortOrder: String?
 //    ): Cursor? {
 //        if (LocalStorageProvider.isMissingPermission(context)) {
 //            return null
@@ -332,9 +310,9 @@ package com.giphyapp.util
 //
 //    @Throws(FileNotFoundException::class)
 //    override fun openDocument(
-//            documentId: String,
-//            mode: String,
-//            signal: CancellationSignal?
+//        documentId: String,
+//        mode: String,
+//        signal: CancellationSignal?
 //    ): ParcelFileDescriptor? {
 //        if (LocalStorageProvider.isMissingPermission(context)) {
 //            return null
@@ -347,5 +325,3 @@ package com.giphyapp.util
 //        return true
 //    }
 //}
-//*//*
-//

@@ -51,7 +51,7 @@ class FullscreenActivity : AppCompatActivity() {
 
     private fun setupViewModel() {
         val gifsRepository = GifsRepository(GifDatabase(this))
-        val viewModelProviderFactory = GifsViewModelProviderFactory(gifsRepository)
+        val viewModelProviderFactory = GifsViewModelProviderFactory(application, gifsRepository)
         viewModel = ViewModelProvider(this, viewModelProviderFactory).get(GifsViewModel::class.java)
     }
 

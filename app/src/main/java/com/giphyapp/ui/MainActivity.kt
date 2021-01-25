@@ -1,13 +1,14 @@
 package com.giphyapp.ui
 
+import RealPathUtil.getRealPath
 import android.Manifest
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Bitmap
-import android.media.MediaScannerConnection
+import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
+import android.os.FileUtils
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
@@ -15,19 +16,28 @@ import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.AbsListView
 import android.widget.Toast
+import androidx.annotation.NonNull
+import androidx.annotation.Nullable
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
+import androidx.transition.Transition
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DecodeFormat
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.request.target.CustomTarget
+import com.bumptech.glide.request.target.SimpleTarget
+import com.bumptech.glide.request.target.Target.SIZE_ORIGINAL
+import com.giphyapp.BuildConfig
 import com.giphyapp.R
 import com.giphyapp.adapters.GifAdapter
 import com.giphyapp.databinding.ActivityMainBinding
 import com.giphyapp.db.GifDatabase
 import com.giphyapp.models.Data
-import com.giphyapp.models.Gif
 import com.giphyapp.repository.GifsRepository
 import com.giphyapp.util.Constants.Companion.EMPTY_LAST_PAGE_LOSS
 import com.giphyapp.util.Constants.Companion.GIF_PICK_CODE
@@ -37,8 +47,22 @@ import com.giphyapp.util.Constants.Companion.NUMBER_OF_GIFS_ON_PAGE
 import com.giphyapp.util.Constants.Companion.PERMISSION_CODE_READ_EXTERNAL
 import com.giphyapp.util.Constants.Companion.PERMISSION_CODE_WRITE_EXTERNAL
 import com.giphyapp.util.Resource
-import kotlinx.coroutines.*
-import java.io.*
+import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.launch
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.OkHttpClient
+import okhttp3.Request
+import okhttp3.RequestBody.Companion.asRequestBody
+import okhttp3.logging.HttpLoggingInterceptor
+import java.io.File
+import java.util.concurrent.TimeUnit
+import com.bumptech.glide.request.target.Target
+import java.io.FileOutputStream
+import java.lang.Exception
 
 
 class MainActivity : AppCompatActivity() {
@@ -181,6 +205,7 @@ class MainActivity : AppCompatActivity() {
     private fun pickGifFromGallery() {
         // Intent to pick gif from gallery
         var intent: Intent = Intent(Intent.ACTION_PICK)
+
         intent.setType("image/*")
 
         startActivityForResult(intent, GIF_PICK_CODE)
@@ -188,7 +213,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupViewModel() {
         val gifsRepository = GifsRepository(GifDatabase(this))
-        val viewModelProviderFactory = GifsViewModelProviderFactory(gifsRepository)
+        val viewModelProviderFactory = GifsViewModelProviderFactory(application, gifsRepository)
         viewModel = ViewModelProvider(this, viewModelProviderFactory).get(GifsViewModel::class.java)
 
         viewModel.gifs.observe(this, Observer { response ->
@@ -218,7 +243,7 @@ class MainActivity : AppCompatActivity() {
                     showProgressBar()
                 }
             }
-        })
+       0 })
     }
 
     private fun saveListOfGifsInDB(data: List<Data>) {
@@ -255,44 +280,67 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun saveGifInDB(url: String) = CoroutineScope(Dispatchers.IO).launch {
-        saveGifOnStorage(Glide.with(this@MainActivity)
-                .asBitmap()
-                .load(url)
-                .submit()
-                .get())
-    }
 
-    fun saveGifOnStorage(image: Bitmap) : String? {
-        var savedImagePath: String? = null
-        val imageFileName = System.currentTimeMillis().toString() + ".gif"
-        val storageDir = File(this.getExternalFilesDir(null), "Giphy")
-        var success = true
-        if (!storageDir.exists()) {
-            success = storageDir.mkdirs()
-        }
-        if (success) {
-            val imageFile = File(storageDir, imageFileName)
-            savedImagePath = imageFile.getAbsolutePath()
-            try {
-                val fOut: OutputStream = FileOutputStream(imageFile)
-                image.compress(Bitmap.CompressFormat.JPEG, 100, fOut)
-                fOut.close()
-            } catch (e: Exception) {
-                e.printStackTrace()
+        Glide.with(this@MainActivity).asFile()
+            .load(url)
+            .apply(
+                RequestOptions()
+                    .diskCacheStrategy(DiskCacheStrategy.DATA)
+                    .format(DecodeFormat.PREFER_ARGB_8888)
+                    .override(Target.SIZE_ORIGINAL)
+            )
+            .into(object : CustomTarget<File?>() {
+                override fun onResourceReady(
+                    resource: File,
+                    transition: com.bumptech.glide.request.transition.Transition<in File?>?
+                ) {
+                    storeImage(resource)
+                }
+
+                override fun onLoadCleared(placeholder: Drawable?) {
+
+                }
+            })
+     }
+
+    private fun storeImage(to: File) {
+
+        val dir = File(getExternalFilesDir(null), "Saved_gifs")
+            if(!dir.isDirectory){
+                dir.mkdir()
             }
 
-            // Save in DB
-            val gif = Gif(pathToGif = savedImagePath)
-            viewModel.saveGif(gif)
+            val gifFile = File(dir, System.currentTimeMillis().toString() + "test.gif")
 
-            // Add the image to the system gallery
-            // galleryAddPic(savedImagePath)
-            //Toast.makeText(this, "IMAGE SAVED", Toast.LENGTH_LONG).show() // to make this working, need to manage coroutine, as this execution is something off the main thread
-            Log.e("VIEWMODEL", savedImagePath)
+
+        //This point and below is responsible for the write operation
+        var outputStream: FileOutputStream? = null;
+        try {
+            gifFile.createNewFile()
+            //second argument of FileOutputStream constructor indicates whether
+            //to append or create new file if one exists
+            outputStream = FileOutputStream(gifFile, true);
+
+            outputStream.write(to.readBytes());
+            outputStream.flush();
+            outputStream.close();
+        } catch (e: Exception){
+            Log.e("NESTO", "NE RADI")
         }
-        return savedImagePath
     }
 
+    private fun deleteRecursive(storageDir: File) {
+
+        if(storageDir.isDirectory){
+            for(child in storageDir.listFiles()!!){
+                deleteRecursive(child)
+            }
+        }
+
+        storageDir.delete()
+    }
+
+    /*
     private fun galleryAddPic(imagePath: String?) {
         imagePath?.let { path ->
             val file = File(path)
@@ -303,6 +351,7 @@ class MainActivity : AppCompatActivity() {
             })
         }
     }
+    */
 
     // Handle permission result
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
@@ -334,41 +383,57 @@ class MainActivity : AppCompatActivity() {
     // Handle gif pick result
     override fun onActivityResult(requestCode: Int, resultCode: Int, data: Intent?) {
 
-        if(resultCode == RESULT_OK && requestCode == GIF_PICK_CODE && data!=null && data.data!=null){
+        if(resultCode == RESULT_OK && requestCode == GIF_PICK_CODE  && data?.data!=null){
 
-            Log.e("MAIN ACTIVITY", data.data.toString())
-            // Convert gif to binary
             val uri: Uri = data.data!!
 
-            /*val i:Intent = Intent(this, FullscreenActivity::class.java)
-            i.putExtra("uri",uri)
-            startActivity(i)*/
+            val uriString = getRealPath(this, uri)
 
-            /*val iStream: InputStream? = contentResolver.openInputStream(uri)
-            val bitmap = BitmapFactory.decodeStream(iStream)
-            iStream?.close()*/
+            val file = File(uriString!!)
 
+            if(contentResolver.getType(uri) != "image/gif"){
+                Snackbar.make(binding.root, "PLEASE PICK A GIF", Snackbar.LENGTH_SHORT).show()
+                return
+            }
 
-            val inputStream = this@MainActivity?.contentResolver.openInputStream(uri)
-            val fileBinary = inputStream?.readBytes()
+            val logging = HttpLoggingInterceptor()
+            logging.setLevel(HttpLoggingInterceptor.Level.BODY)
 
+            val okHttpClient = OkHttpClient()
+                .newBuilder()
+                .connectTimeout(1, TimeUnit.MINUTES)
+                .readTimeout(1, TimeUnit.MINUTES)
+                .writeTimeout(1, TimeUnit.MINUTES)
+                .addInterceptor(logging)
+                .build()
 
-            /*val stream = ByteArrayOutputStream()
-            bitmap.compress(Bitmap.CompressFormat.PNG, 90, stream)
-            val fileBinary = stream.toByteArray()*/
+            val body = MultipartBody.Builder().setType(MultipartBody.FORM)
+                .addFormDataPart("api_key", BuildConfig.GiphySecAPIKey)
+                .addFormDataPart("tags", "emstakur")
+                .addFormDataPart("file", file.name,
+                    file.asRequestBody("application/octet-stream".toMediaTypeOrNull()))
+                .build()
 
-            /*val file: File = File(uri.path)
-            val fileBinary = file.readBytes()*/
+            val request = Request.Builder()
+                .url("https://upload.giphy.com/v1/gifs?api_key=" + BuildConfig.GiphySecAPIKey)
+                .method("POST", body)
+                .build()
 
-            //val file = File(uri.path!!)
+            GlobalScope.launch(Dispatchers.IO) {
 
-            //Log.e("PLEASEEEE",uri.path!!)
+                Snackbar.make(binding.root, "UPLOAD STARTED", Snackbar.LENGTH_SHORT).show()
 
-            //val fileBinary: RequestBody = file.asRequestBody("application/octet-stream;charset=utf-8".toMediaTypeOrNull())
+                val response = okHttpClient.newCall(request).execute()
+
+                Snackbar.make(binding.root, "UPLOAD FINISHED", Snackbar.LENGTH_SHORT).show()
+
+                Log.e("PROSLO JE SVE 200 OK", response.message + " " + response.code)
+            }
 
             // Upload to giphy
-            viewModel.uploadGif(fileBinary!!)
-        }
+            //viewModel.uploadGif(filePart,tagsRequestBody,apiKeyRequestBody)
+
+            }
 
         super.onActivityResult(requestCode, resultCode, data)
     }

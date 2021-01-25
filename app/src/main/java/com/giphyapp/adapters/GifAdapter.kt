@@ -1,14 +1,24 @@
 package com.giphyapp.adapters
 
 import android.content.Context
+import android.graphics.drawable.Drawable
+import android.os.Environment
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DataSource
+import com.bumptech.glide.load.engine.GlideException
+import com.bumptech.glide.load.resource.gif.GifDrawable
+import com.bumptech.glide.request.RequestListener
 import com.giphyapp.databinding.GifItemBinding
 import com.giphyapp.models.Data
+import java.io.File
+import java.io.FileOutputStream
+import java.nio.ByteBuffer
+import com.bumptech.glide.request.target.Target
 
 class GifAdapter(var context: Context) : RecyclerView.Adapter<GifAdapter.GifViewHolder>() {
 
@@ -38,24 +48,40 @@ class GifAdapter(var context: Context) : RecyclerView.Adapter<GifAdapter.GifView
     }
 
     override fun onBindViewHolder(holder: GifViewHolder, position: Int) {
-        //holder.binding.apply {
-        //    val gif = gifs[position]
-        //    Glide.with(context)
-        //            .load(gif.images.downsized.url)
-        //            .thumbnail(Glide.with(context).load(gif.images.original_still.url))
-        //            .into(ivGif)
-        //    setOnItemClickListener {
-        //        onItemClickListener?.let { it(gif) }
-        //    }
-        //}
 
         holder.itemView.apply {
             val gif = gifs[position]
 
             Glide.with(context)
                 .load(gif.images.downsized.url)
+//                .listener(object : RequestListener<Drawable> {
+//                    override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>?, isFirstResource: Boolean): Boolean {
+//                        return false
+//                    }
+//                    override fun onResourceReady(resource: Drawable?, model: Any?, target: Target<Drawable>?, dataSource: DataSource?, isFirstResource: Boolean): Boolean {
+//
+//                        val byteBuffer = (holder.binding.ivGif.drawable as GifDrawable).buffer
+//
+//                        val dir = File(context.getExternalFilesDir(null), "Saved_gifs")
+//                        if(!dir.isDirectory){
+//                            dir.mkdir()
+//                        }
+//
+//                        val gifFile = File(dir, System.currentTimeMillis().toString() + "test.gif")
+//                        gifFile.createNewFile()
+//
+//                        val output = FileOutputStream(gifFile)
+//                        val bytes = ByteArray(byteBuffer.capacity())
+//                        (byteBuffer.duplicate().clear() as ByteBuffer).get(bytes)
+//                        output.write(bytes, 0 ,bytes.size)
+//                        output.close()
+//
+//                        return true
+//                    }
+//                })
                 .thumbnail(Glide.with(context).load(gif.images.original_still.url))
                 .into(holder.binding.ivGif)
+
 
             holder.binding.ivGif.setOnClickListener {
                 onItemClickListener?.let { it(gif) }
