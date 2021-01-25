@@ -3,12 +3,12 @@ package com.giphyapp.ui
 import RealPathUtil.getRealPath
 import android.Manifest
 import android.content.Context
+import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
-import android.os.FileUtils
 import android.util.Log
 import android.view.Menu
 import android.view.MenuItem
@@ -16,27 +16,21 @@ import android.view.View
 import android.view.inputmethod.InputMethodManager
 import android.widget.AbsListView
 import android.widget.Toast
-import androidx.annotation.NonNull
-import androidx.annotation.Nullable
+import androidx.appcompat.app.AlertDialog
 import androidx.appcompat.app.AppCompatActivity
 import androidx.appcompat.widget.SearchView
 import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import androidx.transition.Transition
 import com.bumptech.glide.Glide
 import com.bumptech.glide.load.DecodeFormat
 import com.bumptech.glide.load.engine.DiskCacheStrategy
 import com.bumptech.glide.request.RequestOptions
 import com.bumptech.glide.request.target.CustomTarget
-import com.bumptech.glide.request.target.SimpleTarget
-import com.bumptech.glide.request.target.Target.SIZE_ORIGINAL
-import com.giphyapp.BuildConfig
 import com.giphyapp.R
 import com.giphyapp.adapters.GifAdapter
 import com.giphyapp.databinding.ActivityMainBinding
-import com.giphyapp.db.GifDatabase
 import com.giphyapp.models.Data
 import com.giphyapp.repository.GifsRepository
 import com.giphyapp.util.Constants.Companion.EMPTY_LAST_PAGE_LOSS
@@ -48,23 +42,15 @@ import com.giphyapp.util.Constants.Companion.PERMISSION_CODE_READ_EXTERNAL
 import com.giphyapp.util.Constants.Companion.PERMISSION_CODE_WRITE_EXTERNAL
 import com.giphyapp.util.Resource
 import com.google.android.material.snackbar.Snackbar
-import kotlinx.coroutines.CoroutineScope
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody.Companion.asRequestBody
-import okhttp3.logging.HttpLoggingInterceptor
 import java.io.File
-import java.util.concurrent.TimeUnit
 import com.bumptech.glide.request.target.Target
 import com.giphyapp.adapters.FileAdapter
-import com.giphyapp.models.Gif
+import kotlinx.coroutines.*
+import okhttp3.Response
+import org.json.JSONObject
 import java.io.FileOutputStream
 import java.lang.Exception
+import java.net.SocketTimeoutException
 
 
 class MainActivity : AppCompatActivity() {
@@ -217,7 +203,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupViewModel() {
-        val gifsRepository = GifsRepository(GifDatabase(this))
+        val gifsRepository = GifsRepository()
         val viewModelProviderFactory = GifsViewModelProviderFactory(application, gifsRepository)
         viewModel = ViewModelProvider(this, viewModelProviderFactory).get(GifsViewModel::class.java)
 
@@ -251,13 +237,13 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    private fun saveListOfGifsInDB(data: List<Data>) {
+    private fun saveListOfGifsOnStorage(data: List<Data>) {
 
         //Save gifs in DB only one time
         if(viewModel.firstTimeSavingGifs == true){
             viewModel.firstTimeSavingGifs = false
             for(gif in data){
-                saveGifInDB(gif.images.downsized
+                saveGifOnStorage(gif.images.downsized
                         .url)
             }
         }
@@ -288,11 +274,11 @@ class MainActivity : AppCompatActivity() {
             var permissions: Array<String> = arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
             requestPermissions(permissions, PERMISSION_CODE_WRITE_EXTERNAL)
         }else{
-            saveListOfGifsInDB(gifAdapter.gifs)
+            saveListOfGifsOnStorage(gifAdapter.gifs)
         }
     }
 
-    private fun saveGifInDB(url: String) = CoroutineScope(Dispatchers.IO).launch {
+    private fun saveGifOnStorage(url: String) = CoroutineScope(Dispatchers.IO).launch {
 
         // Getting File object from url
         Glide.with(this@MainActivity).asFile()
@@ -345,7 +331,6 @@ class MainActivity : AppCompatActivity() {
             outputStream.flush();
             outputStream.close();
 
-            viewModel.saveGif(Gif(pathToGif = gifFile.path))
         } catch (e: Exception){
             Log.e(TAG, "Something went wrong while saving a gif")
         }
@@ -377,7 +362,7 @@ class MainActivity : AppCompatActivity() {
             }
             PERMISSION_CODE_WRITE_EXTERNAL -> {
                 if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    saveListOfGifsInDB(gifAdapter.gifs)
+                    saveListOfGifsOnStorage(gifAdapter.gifs)
                 } else {
                     Toast
                             .makeText(this@MainActivity, "I don't have the permission to access your storage", Toast.LENGTH_SHORT)
@@ -405,43 +390,52 @@ class MainActivity : AppCompatActivity() {
                 return
             }
 
-            val logging = HttpLoggingInterceptor()
-            logging.setLevel(HttpLoggingInterceptor.Level.BODY)
-
-            val okHttpClient = OkHttpClient()
-                .newBuilder()
-                .connectTimeout(1, TimeUnit.MINUTES)
-                .readTimeout(1, TimeUnit.MINUTES)
-                .writeTimeout(1, TimeUnit.MINUTES)
-                .addInterceptor(logging)
-                .build()
-
-            val body = MultipartBody.Builder().setType(MultipartBody.FORM)
-                .addFormDataPart("api_key", BuildConfig.GiphySecAPIKey)
-                .addFormDataPart("tags", "emstakur")
-                .addFormDataPart("file", file.name,
-                    file.asRequestBody("application/octet-stream".toMediaTypeOrNull()))
-                .build()
-
-            val request = Request.Builder()
-                .url("https://upload.giphy.com/v1/gifs?api_key=" + BuildConfig.GiphySecAPIKey)
-                .method("POST", body)
-                .build()
 
             GlobalScope.launch(Dispatchers.IO) {
 
                 Snackbar.make(binding.root, "UPLOAD STARTED", Snackbar.LENGTH_SHORT).show()
 
-                val response = okHttpClient.newCall(request).execute()
+                var response: Response? = null
+                try{
+                    // Upload to giphy
+                    response = viewModel.uploadGif(file)
+                }catch(e: SocketTimeoutException){
+                    withContext(Dispatchers.Main){
+                        val builder = AlertDialog.Builder(this@MainActivity, R.style.AlertDialogTheme)
+                        builder.setTitle("Upload failed")
+                        builder.setMessage("Bad connection")
+                        builder.setCancelable(false)
+                        builder.setPositiveButton("OK", DialogInterface.OnClickListener(function = { dialog, which ->
+                            // Just close the alert
+                        }))
+                        builder.create().show()
+                    }
+                }
 
-                Snackbar.make(binding.root, "UPLOAD FINISHED", Snackbar.LENGTH_SHORT).show()
+
+                if(response != null){
+                    Snackbar.make(binding.root, "UPLOAD FINISHED", Snackbar.LENGTH_SHORT).show()
+
+                    val jsonData = response.body?.string()!!
+                    val jObject = JSONObject(jsonData)
+                    val dataObject = jObject.get("data") as JSONObject
+                    val gifId = dataObject.getString("id")
+
+                    withContext(Dispatchers.Main){
+                        val builder = AlertDialog.Builder(this@MainActivity, R.style.AlertDialogTheme)
+                        builder.setTitle("Upload finished")
+                        builder.setMessage("Uploaded GIF ID: $gifId")
+                        builder.setCancelable(false)
+                        builder.setPositiveButton("OK", DialogInterface.OnClickListener(function = { dialog, which ->
+                            // Just close the alert
+                        }))
+                        builder.create().show()
+                    }
+                }
 
             }
 
-            // Upload to giphy
-            //viewModel.uploadGif(filePart,tagsRequestBody,apiKeyRequestBody)
-
-            }
+        }
 
         super.onActivityResult(requestCode, resultCode, data)
     }

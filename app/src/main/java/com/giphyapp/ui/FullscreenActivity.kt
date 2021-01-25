@@ -2,14 +2,10 @@ package com.giphyapp.ui
 
 import android.net.Uri
 import android.os.Bundle
-import android.util.Log
 import android.view.View
 import androidx.appcompat.app.AppCompatActivity
-import androidx.lifecycle.ViewModelProvider
 import com.bumptech.glide.Glide
 import com.giphyapp.databinding.ActivityFullscreenBinding
-import com.giphyapp.db.GifDatabase
-import com.giphyapp.repository.GifsRepository
 import java.io.File
 
 class FullscreenActivity : AppCompatActivity() {
@@ -25,7 +21,7 @@ class FullscreenActivity : AppCompatActivity() {
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
 
-        setupViewModel()
+         //setupViewModel()
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowHomeEnabled(true)
@@ -54,9 +50,9 @@ class FullscreenActivity : AppCompatActivity() {
         return true
     }
 
-    private fun setupViewModel() {
-        val gifsRepository = GifsRepository(GifDatabase(this))
-        val viewModelProviderFactory = GifsViewModelProviderFactory(application, gifsRepository)
-        viewModel = ViewModelProvider(this, viewModelProviderFactory).get(GifsViewModel::class.java)
-    }
+//    private fun setupViewModel() {
+//        val gifsRepository = GifsRepository(GifDatabase(this))
+//        val viewModelProviderFactory = GifsViewModelProviderFactory(application, gifsRepository)
+//        viewModel = ViewModelProvider(this, viewModelProviderFactory).get(GifsViewModel::class.java)
+//    }
 }
