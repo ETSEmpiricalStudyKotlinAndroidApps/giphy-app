@@ -31,6 +31,7 @@ class FullscreenActivity : AppCompatActivity() {
         supportActionBar?.setDisplayShowHomeEnabled(true)
 
         if(intent.extras!!["url"] != null){
+            binding.btnUpload.visibility = View.INVISIBLE
             Glide.with(this)
                     .load(intent.extras!!["url"])
                     .thumbnail(Glide.with(this).load(intent.extras!!["thumbnail"]))
@@ -58,5 +59,4 @@ class FullscreenActivity : AppCompatActivity() {
         val viewModelProviderFactory = GifsViewModelProviderFactory(application, gifsRepository)
         viewModel = ViewModelProvider(this, viewModelProviderFactory).get(GifsViewModel::class.java)
     }
-
 }

@@ -73,6 +73,7 @@ class MainActivity : AppCompatActivity() {
     private var trendingGifsDisplayed = true
     private lateinit var lastSearch: String
     private lateinit var binding: ActivityMainBinding
+    private  var hadConnection: Boolean? = null
     lateinit var viewModel: GifsViewModel
     lateinit var gifAdapter: GifAdapter
     lateinit var fileAdapter: FileAdapter
@@ -94,6 +95,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun setGifOnClickListener() {
 
+        //Different listeners for online and offline mode
         if(viewModel.hasInternetConnection()==true){
             gifAdapter.setOnItemClickListener {
                 val i: Intent = Intent(this, FullscreenActivity::class.java)
@@ -142,7 +144,7 @@ class MainActivity : AppCompatActivity() {
                         restartPagination()
                         trendingGifsDisplayed = false
                         lastSearch = query.toString()
-                        viewModel.searchGifs(query.toString())
+                        checkConnectionChangeAndGetGifs(query.toString())
                     }
                 }
 
@@ -163,7 +165,7 @@ class MainActivity : AppCompatActivity() {
                 if (trendingGifsDisplayed == false) {
                     trendingGifsDisplayed = true
                     restartPagination()
-                    viewModel.getTrendingGifs()
+                    checkConnectionChangeAndGetGifs()
                 }
                 return true
             }
@@ -178,9 +180,9 @@ class MainActivity : AppCompatActivity() {
             restartPagination()
 
             if(trendingGifsDisplayed == true){
-                viewModel.getTrendingGifs()
+                checkConnectionChangeAndGetGifs()
             }else{
-                viewModel.searchGifs(lastSearch)
+                checkConnectionChangeAndGetGifs(lastSearch)
             }
 
             binding.swipeRefreshLayout.isRefreshing = false
@@ -262,14 +264,16 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() = binding.rvGifs.apply {
+
         layoutManager = GridLayoutManager(this@MainActivity, NUMBER_OF_COLUMNS)
 
-
         if(viewModel.hasInternetConnection()==true){
+            hadConnection = true
             gifAdapter = GifAdapter(this@MainActivity)
             adapter = gifAdapter
             addOnScrollListener(this@MainActivity.scrollListener)
         }else{
+            hadConnection = false
             fileAdapter = FileAdapter(this@MainActivity)
             adapter = fileAdapter
             fileAdapter.differ.submitList(viewModel.getSavedGifs())
@@ -282,9 +286,7 @@ class MainActivity : AppCompatActivity() {
         if(checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
                 == PackageManager.PERMISSION_DENIED){
             var permissions: Array<String> = arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
-            //TODO("IF SAVING TO EXTERNAL STORAGE DOESNT WORK, CHECK ACCES NETWORK PERMISSION MAYBE")
             requestPermissions(permissions, PERMISSION_CODE_WRITE_EXTERNAL)
-            Log.e("MAIN ACATIVIY", "PERMISSION REQUESTED")
         }else{
             saveListOfGifsInDB(gifAdapter.gifs)
         }
@@ -292,6 +294,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun saveGifInDB(url: String) = CoroutineScope(Dispatchers.IO).launch {
 
+        // Getting File object from url
         Glide.with(this@MainActivity).asFile()
             .load(url)
             .apply(
@@ -316,10 +319,12 @@ class MainActivity : AppCompatActivity() {
 
     private fun storeImage(to: File) {
 
+        // Saving image on storage
         val dir = File(getExternalFilesDir(null), "Saved_gifs")
             if(!dir.isDirectory){
                 dir.mkdir()
             }else if(viewModel.firstTimeLoadingTrending == true){
+                // If the directory exists, delete the directory
                 viewModel.firstTimeLoadingTrending = false
                 deleteRecursive(dir)
                 dir.mkdir()
@@ -341,9 +346,8 @@ class MainActivity : AppCompatActivity() {
             outputStream.close();
 
             viewModel.saveGif(Gif(pathToGif = gifFile.path))
-            Log.e(TAG, gifFile.path)
         } catch (e: Exception){
-            Log.e(TAG, "Something went wrong with gif in saving")
+            Log.e(TAG, "Something went wrong while saving a gif")
         }
     }
 
@@ -397,7 +401,7 @@ class MainActivity : AppCompatActivity() {
             val file = File(uriString!!)
 
             if(contentResolver.getType(uri) != "image/gif"){
-                Snackbar.make(binding.root, "PLEASE PICK A GIF", Snackbar.LENGTH_SHORT).show()
+                Snackbar.make(binding.root, "Please pick a gif", Snackbar.LENGTH_SHORT).show()
                 return
             }
 
@@ -432,7 +436,6 @@ class MainActivity : AppCompatActivity() {
 
                 Snackbar.make(binding.root, "UPLOAD FINISHED", Snackbar.LENGTH_SHORT).show()
 
-                Log.e("PROSLO JE SVE 200 OK", response.message + " " + response.code)
             }
 
             // Upload to giphy
@@ -441,6 +444,36 @@ class MainActivity : AppCompatActivity() {
             }
 
         super.onActivityResult(requestCode, resultCode, data)
+    }
+
+    private fun checkConnectionChangeAndGetGifs(searchQuery: String? = null){
+
+        if(hadConnection == true && viewModel.hasInternetConnection() == false){
+            fileAdapter = FileAdapter(this)
+            binding.rvGifs.adapter = fileAdapter
+            fileAdapter.differ.submitList(viewModel.getSavedGifs())
+            hadConnection = false
+            setGifOnClickListener()
+        }else if(hadConnection == false && viewModel.hasInternetConnection() == true){
+            gifAdapter = GifAdapter(this)
+            binding.rvGifs.adapter = gifAdapter
+            if(searchQuery == null){
+                viewModel.getTrendingGifs()
+            }else{
+                viewModel.searchGifs(searchQuery)
+            }
+            binding.rvGifs.addOnScrollListener(this@MainActivity.scrollListener)
+            setGifOnClickListener()
+            hadConnection = true
+        }else{
+            if(searchQuery == null){
+                viewModel.getTrendingGifs()
+            }else{
+                viewModel.searchGifs(searchQuery)
+            }
+        }
+
+
     }
 
     // Pagination
@@ -472,9 +505,9 @@ class MainActivity : AppCompatActivity() {
 
             if(shouldPaginate) {
                 if(trendingGifsDisplayed){
-                    viewModel.getTrendingGifs()
+                    checkConnectionChangeAndGetGifs()
                 }else{
-                    viewModel.searchGifs(lastSearch)
+                    checkConnectionChangeAndGetGifs(lastSearch)
                 }
                 isScrolling = false
             }
