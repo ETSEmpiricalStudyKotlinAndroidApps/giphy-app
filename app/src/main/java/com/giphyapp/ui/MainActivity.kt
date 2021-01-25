@@ -6,6 +6,7 @@ import android.content.Context
 import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
+import android.content.res.Configuration
 import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
@@ -182,7 +183,7 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setFABListener() {
-        binding.fab.setOnClickListener { view ->
+        binding.fab.setOnClickListener { _ ->
 
             if(viewModel.hasInternetConnection() == true){
                 if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
@@ -266,7 +267,14 @@ class MainActivity : AppCompatActivity() {
 
     private fun setupRecyclerView() = binding.rvGifs.apply {
 
-        layoutManager = GridLayoutManager(this@MainActivity, NUMBER_OF_COLUMNS)
+        var orientation = resources.configuration.orientation
+
+        var number_of_columns = NUMBER_OF_COLUMNS
+
+        if(orientation == Configuration.ORIENTATION_LANDSCAPE){
+            number_of_columns++
+        }
+        layoutManager = GridLayoutManager(this@MainActivity, number_of_columns)
 
         if(viewModel.hasInternetConnection()==true){
             hadConnection = true
@@ -319,22 +327,22 @@ class MainActivity : AppCompatActivity() {
 
                 }
             })
-     }
+    }
 
     private fun storeImage(to: File) {
 
         // Saving image on storage
         val dir = File(getExternalFilesDir(null), "Saved_gifs")
-            if(!dir.isDirectory){
-                dir.mkdir()
-            }else if(viewModel.firstTimeLoadingTrending == true){
-                // If the directory exists, delete the directory
-                viewModel.firstTimeLoadingTrending = false
-                deleteRecursive(dir)
-                dir.mkdir()
-            }
+        if(!dir.isDirectory){
+            dir.mkdir()
+        }else if(viewModel.firstTimeLoadingTrending == true){
+            // If the directory exists, delete the directory
+            viewModel.firstTimeLoadingTrending = false
+            deleteRecursive(dir)
+            dir.mkdir()
+        }
 
-            val gifFile = File(dir, System.currentTimeMillis().toString() + "test.gif")
+        val gifFile = File(dir, System.currentTimeMillis().toString() + "test.gif")
 
 
         //This point and below is responsible for the write operation

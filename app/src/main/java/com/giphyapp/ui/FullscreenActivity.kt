@@ -27,13 +27,11 @@ class FullscreenActivity : AppCompatActivity() {
         supportActionBar?.setDisplayShowHomeEnabled(true)
 
         if(intent.extras!!["url"] != null){
-            binding.btnUpload.visibility = View.INVISIBLE
             Glide.with(this)
                     .load(intent.extras!!["url"])
                     .thumbnail(Glide.with(this).load(intent.extras!!["thumbnail"]))
                     .into(binding.ivGif)
         }else if(intent.extras!!["file"] != null){
-            binding.btnUpload.visibility = View.INVISIBLE
             Glide.with(this)
                     .load(intent.extras!!["file"] as File)
                     .into(binding.ivGif)
