@@ -67,6 +67,12 @@ class MainActivity : AppCompatActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
 
+        runBlocking {
+            delay(500L)
+        }
+
+        setTheme(R.style.Theme_GiphyApp_NoActionBar)
+
         binding = ActivityMainBinding.inflate(layoutInflater)
 
         setContentView(binding.root)
@@ -214,12 +220,21 @@ class MainActivity : AppCompatActivity() {
                     response.data?.let { giphyResponse ->
                         gifAdapter.differ.submitList(giphyResponse.data.toList())
 
+                        if(giphyResponse.pagination.count == 0){
+                            binding.tvError.visibility = View.VISIBLE
+                        }else{
+                            binding.tvError.visibility = View.INVISIBLE
+                        }
+
                         val totalPages = giphyResponse.pagination.total_count / NUMBER_OF_GIFS_ON_PAGE +
                                 INTEGER_DIVISION_PAGE_LOSS + EMPTY_LAST_PAGE_LOSS
 
                         isLastPage = viewModel.gifsPage == totalPages
 
-                        checkExternalWritePermissions()
+                        if(viewModel.trendingSaved == false){
+                            viewModel.firstTimeLoadingTrending = true
+                            checkExternalWritePermissions()
+                        }
                     }
                 }
 
@@ -263,6 +278,9 @@ class MainActivity : AppCompatActivity() {
             fileAdapter = FileAdapter(this@MainActivity)
             adapter = fileAdapter
             fileAdapter.differ.submitList(viewModel.getSavedGifs())
+
+            // Check if should display error
+            checkForEmptyListOffline()
         }
     }
 
@@ -320,7 +338,7 @@ class MainActivity : AppCompatActivity() {
 
 
         //This point and below is responsible for the write operation
-        var outputStream: FileOutputStream? = null;
+        var outputStream: FileOutputStream?
         try {
             gifFile.createNewFile()
             //second argument of FileOutputStream constructor indicates whether
@@ -405,7 +423,7 @@ class MainActivity : AppCompatActivity() {
                         builder.setTitle("Upload failed")
                         builder.setMessage("Bad connection")
                         builder.setCancelable(false)
-                        builder.setPositiveButton("OK", DialogInterface.OnClickListener(function = { dialog, which ->
+                        builder.setPositiveButton("OK", DialogInterface.OnClickListener(function = { _, _ ->
                             // Just close the alert
                         }))
                         builder.create().show()
@@ -426,7 +444,7 @@ class MainActivity : AppCompatActivity() {
                         builder.setTitle("Upload finished")
                         builder.setMessage("Uploaded GIF ID: $gifId")
                         builder.setCancelable(false)
-                        builder.setPositiveButton("OK", DialogInterface.OnClickListener(function = { dialog, which ->
+                        builder.setPositiveButton("OK", DialogInterface.OnClickListener(function = { _, _ ->
                             // Just close the alert
                         }))
                         builder.create().show()
@@ -446,6 +464,7 @@ class MainActivity : AppCompatActivity() {
             fileAdapter = FileAdapter(this)
             binding.rvGifs.adapter = fileAdapter
             fileAdapter.differ.submitList(viewModel.getSavedGifs())
+            checkForEmptyListOffline()
             hadConnection = false
             setGifOnClickListener()
         }else if(hadConnection == false && viewModel.hasInternetConnection() == true){
@@ -465,9 +484,20 @@ class MainActivity : AppCompatActivity() {
             }else{
                 viewModel.searchGifs(searchQuery)
             }
+
+            if(viewModel.hasInternetConnection()==false){
+                checkForEmptyListOffline()
+            }
         }
+    }
 
 
+    private fun checkForEmptyListOffline(){
+        if(fileAdapter.files.size == 0){
+            binding.tvError.visibility = View.VISIBLE
+        }else{
+            binding.tvError.visibility = View.INVISIBLE
+        }
     }
 
     // Pagination

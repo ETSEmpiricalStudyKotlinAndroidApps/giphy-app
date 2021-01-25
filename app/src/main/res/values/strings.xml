@@ -14,4 +14,5 @@
     <string name="upload">Upload</string>
     <string name="sd_card">SD card</string>
     <string name="home">Home</string>
+    <string name="no_gifs_to_display">No GIFS to display</string>
 </resources>

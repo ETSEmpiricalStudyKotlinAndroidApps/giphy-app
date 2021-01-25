@@ -63,4 +63,19 @@
         app:layout_constraintEnd_toEndOf="parent"
         app:srcCompat="@android:drawable/ic_menu_upload" />
 
+
+    <TextView
+        android:id="@+id/tvError"
+        android:layout_width="match_parent"
+        android:layout_height="120dp"
+        android:textSize="50sp"
+        android:textAlignment="center"
+        android:textColor="@color/red"
+        android:visibility="invisible"
+        android:adjustViewBounds="true"
+        android:text="@string/no_gifs_to_display"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent" />
+
 </androidx.constraintlayout.widget.ConstraintLayout>

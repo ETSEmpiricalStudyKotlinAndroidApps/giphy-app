@@ -32,12 +32,7 @@ class FullscreenActivity : AppCompatActivity() {
                     .load(intent.extras!!["url"])
                     .thumbnail(Glide.with(this).load(intent.extras!!["thumbnail"]))
                     .into(binding.ivGif)
-        }else if(intent.extras!!["uri"] != null){
-            binding.ivGif.setImageURI(intent.extras!!["uri"] as Uri?)
-            binding.btnUpload.setOnClickListener {
-                //TODO("CALL UPLOAD")
-            }
-        }else{
+        }else if(intent.extras!!["file"] != null){
             binding.btnUpload.visibility = View.INVISIBLE
             Glide.with(this)
                     .load(intent.extras!!["file"] as File)
