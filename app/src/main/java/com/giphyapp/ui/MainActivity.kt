@@ -61,12 +61,14 @@ import okhttp3.logging.HttpLoggingInterceptor
 import java.io.File
 import java.util.concurrent.TimeUnit
 import com.bumptech.glide.request.target.Target
+import com.giphyapp.models.Gif
 import java.io.FileOutputStream
 import java.lang.Exception
 
 
 class MainActivity : AppCompatActivity() {
 
+    private val TAG = "MainActivity"
     private var trendingGifsDisplayed = true
     private lateinit var lastSearch: String
     private lateinit var binding: ActivityMainBinding
@@ -243,7 +245,7 @@ class MainActivity : AppCompatActivity() {
                     showProgressBar()
                 }
             }
-       0 })
+        })
     }
 
     private fun saveListOfGifsInDB(data: List<Data>) {
@@ -308,6 +310,10 @@ class MainActivity : AppCompatActivity() {
         val dir = File(getExternalFilesDir(null), "Saved_gifs")
             if(!dir.isDirectory){
                 dir.mkdir()
+            }else if(viewModel.firstTimeLoadingTrending == true){
+                viewModel.firstTimeLoadingTrending = false
+                deleteRecursive(dir)
+                dir.mkdir()
             }
 
             val gifFile = File(dir, System.currentTimeMillis().toString() + "test.gif")
@@ -324,8 +330,11 @@ class MainActivity : AppCompatActivity() {
             outputStream.write(to.readBytes());
             outputStream.flush();
             outputStream.close();
+
+            viewModel.saveGif(Gif(pathToGif = gifFile.path))
+            Log.e(TAG, gifFile.path)
         } catch (e: Exception){
-            Log.e("NESTO", "NE RADI")
+            Log.e(TAG, "Something went wrong with gif in saving")
         }
     }
 
@@ -339,19 +348,6 @@ class MainActivity : AppCompatActivity() {
 
         storageDir.delete()
     }
-
-    /*
-    private fun galleryAddPic(imagePath: String?) {
-        imagePath?.let { path ->
-            val file = File(path)
-            MediaScannerConnection.scanFile(this, arrayOf(file.toString()),
-                    arrayOf(file.getName()), MediaScannerConnection.OnScanCompletedListener { path, uri ->
-                Log.e("EXTERNAL PATH ", path!!)
-                Log.e("EXTERNAL URI", uri!!.toString())
-            })
-        }
-    }
-    */
 
     // Handle permission result
     override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {

@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
+import java.io.File
 
 
 class GifsViewModel(
@@ -38,6 +39,7 @@ class GifsViewModel(
         if(hasInternetConnection()){
             getTrendingGifs();
         }else{
+            getSavedGifs()
             Toast.makeText(getApplication(), "NO INTERNET CONNECTION", Toast.LENGTH_SHORT).show()
         }
 
@@ -65,7 +67,16 @@ class GifsViewModel(
         gifsRepository.upsert(gif)
     }
 
-    fun getSavedGifs() = gifsRepository.getSavedGifs()
+    fun getSavedGifs() {
+        val folder = File(getApplication<GiphyApplication>().getExternalFilesDir(null), "Saved_gifs");
+
+        for (fileEntry in folder.listFiles()) {
+            if (fileEntry.isFile()) {
+                Log.e("ViewMODEL", fileEntry.path)
+            }
+        }
+
+    }
 
     fun deleteAllGifs() = viewModelScope.launch {
         gifsRepository.deleteAll()

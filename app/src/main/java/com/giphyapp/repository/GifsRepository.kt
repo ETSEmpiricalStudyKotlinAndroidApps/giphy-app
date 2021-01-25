@@ -9,6 +9,7 @@ import com.giphyapp.util.Constants.Companion.NUMBER_OF_GIFS_ON_PAGE
 import okhttp3.MultipartBody
 import okhttp3.RequestBody
 import retrofit2.Response
+import java.io.File
 
 class GifsRepository(
         val db: GifDatabase
@@ -31,7 +32,9 @@ class GifsRepository(
 
     suspend fun upsert(gif: Gif) = db.getGifDao().upsert(gif)
 
-    fun getSavedGifs() = db.getGifDao().getGifs()
+    fun getSavedGifs(){
+
+    } //= db.getGifDao().getGifs()
 
     suspend fun deleteAll() = db.getGifDao().deleteAll()
 }
