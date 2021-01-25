@@ -61,6 +61,7 @@ import okhttp3.logging.HttpLoggingInterceptor
 import java.io.File
 import java.util.concurrent.TimeUnit
 import com.bumptech.glide.request.target.Target
+import com.giphyapp.adapters.FileAdapter
 import com.giphyapp.models.Gif
 import java.io.FileOutputStream
 import java.lang.Exception
@@ -74,6 +75,7 @@ class MainActivity : AppCompatActivity() {
     private lateinit var binding: ActivityMainBinding
     lateinit var viewModel: GifsViewModel
     lateinit var gifAdapter: GifAdapter
+    lateinit var fileAdapter: FileAdapter
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -91,15 +93,22 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setGifOnClickListener() {
-        gifAdapter.setOnItemClickListener {
 
-            Log.e("LISTENER", "YEESSSSSSSS")
-
-            val i: Intent = Intent(this, FullscreenActivity::class.java)
-            i.putExtra("url",it.images.downsized.url)
-            i.putExtra("thumbnail", it.images.original_still.url)
-            startActivity(i)
+        if(viewModel.hasInternetConnection()==true){
+            gifAdapter.setOnItemClickListener {
+                val i: Intent = Intent(this, FullscreenActivity::class.java)
+                i.putExtra("url",it.images.downsized.url)
+                i.putExtra("thumbnail", it.images.original_still.url)
+                startActivity(i)
+            }
+        }else{
+            fileAdapter.setOnItemClickListener {
+                val i: Intent = Intent(this, FullscreenActivity::class.java)
+                i.putExtra("file",it)
+                startActivity(i)
+            }
         }
+
     }
 
     private fun hideProgressBar() {
@@ -155,17 +164,6 @@ class MainActivity : AppCompatActivity() {
                     trendingGifsDisplayed = true
                     restartPagination()
                     viewModel.getTrendingGifs()
-                }else{
-                    /*
-                    val lista = viewModel.getSavedGifs()
-
-                    if(lista!=null){
-                        for(list in lista){
-                            Log.e("LISTAA", list.id!!.toString() + " " + list.pathToGif)
-                        }
-                    }
-
-                    */
                 }
                 return true
             }
@@ -192,15 +190,18 @@ class MainActivity : AppCompatActivity() {
     private fun setFABListener() {
         binding.fab.setOnClickListener { view ->
 
-            if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
-                            == PackageManager.PERMISSION_DENIED){
-                        var permissions: Array<String> = arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
-                        requestPermissions(permissions, PERMISSION_CODE_READ_EXTERNAL)
-                        Log.e("MAIN ACATIVIY", "PERMISSION REQUESTED")
-                    }else{
-                        pickGifFromGallery()
+            if(viewModel.hasInternetConnection() == true){
+                if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
+                        == PackageManager.PERMISSION_DENIED){
+                    var permissions: Array<String> = arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
+                    requestPermissions(permissions, PERMISSION_CODE_READ_EXTERNAL)
+                    Log.e("MAIN ACATIVIY", "PERMISSION REQUESTED")
+                }else{
+                    pickGifFromGallery()
+                }
+            }else{
+                Toast.makeText(this@MainActivity, "NO INTERNET CONNECTION", Toast.LENGTH_SHORT).show()
             }
-
         }
     }
 
@@ -261,10 +262,18 @@ class MainActivity : AppCompatActivity() {
     }
 
     private fun setupRecyclerView() = binding.rvGifs.apply {
-        gifAdapter = GifAdapter(this@MainActivity)
-        adapter = gifAdapter
         layoutManager = GridLayoutManager(this@MainActivity, NUMBER_OF_COLUMNS)
-        addOnScrollListener(this@MainActivity.scrollListener)
+
+
+        if(viewModel.hasInternetConnection()==true){
+            gifAdapter = GifAdapter(this@MainActivity)
+            adapter = gifAdapter
+            addOnScrollListener(this@MainActivity.scrollListener)
+        }else{
+            fileAdapter = FileAdapter(this@MainActivity)
+            adapter = fileAdapter
+            fileAdapter.differ.submitList(viewModel.getSavedGifs())
+        }
     }
 
     // Checking permissions needed for writing on external storage

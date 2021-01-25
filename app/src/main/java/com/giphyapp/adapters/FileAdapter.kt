@@ -53,10 +53,9 @@ class FileAdapter(var context: Context) : RecyclerView.Adapter<FileAdapter.FileV
             val file = files[position]
 
             Glide.with(context)
-                    .load(file.path)
+                    .load(file)
                     //.thumbnail(Glide.with(context).load(file.path))
                     .into(holder.binding.ivGif)
-
 
             holder.binding.ivGif.setOnClickListener {
                 onItemClickListener?.let { it(file) }

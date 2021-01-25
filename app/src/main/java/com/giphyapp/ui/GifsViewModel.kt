@@ -46,15 +46,25 @@ class GifsViewModel(
     }
 
     fun getTrendingGifs() = viewModelScope.launch {
-        gifs.postValue(Resource.Loading())
-        val response = gifsRepository.getTrendingGifs(gifsPage)
-        gifs.postValue(handleGifsResponse(response))
+        if(hasInternetConnection()){
+            gifs.postValue(Resource.Loading())
+            val response = gifsRepository.getTrendingGifs(gifsPage)
+            gifs.postValue(handleGifsResponse(response))
+        }else{
+            Toast.makeText(getApplication(),"NO INTERNET CONNECTION", Toast.LENGTH_SHORT).show()
+        }
+
     }
 
     fun searchGifs(searchQuery: String) = viewModelScope.launch{
-        gifs.postValue(Resource.Loading())
-        val response = gifsRepository.searchGifs(searchQuery, gifsPage)
-        gifs.postValue(handleGifsResponse(response))
+        if(hasInternetConnection()){
+            gifs.postValue(Resource.Loading())
+            val response = gifsRepository.searchGifs(searchQuery, gifsPage)
+            gifs.postValue(handleGifsResponse(response))
+        }else{
+            Toast.makeText(getApplication(),"NO INTERNET CONNECTION", Toast.LENGTH_SHORT).show()
+        }
+
     }
 
     fun uploadGif(fileBinary: MultipartBody.Part, tags: RequestBody, apiKey: RequestBody) = viewModelScope.launch{
@@ -67,15 +77,10 @@ class GifsViewModel(
         gifsRepository.upsert(gif)
     }
 
-    fun getSavedGifs() {
+    fun getSavedGifs(): List<File> {
         val folder = File(getApplication<GiphyApplication>().getExternalFilesDir(null), "Saved_gifs");
 
-        for (fileEntry in folder.listFiles()) {
-            if (fileEntry.isFile()) {
-                Log.e("ViewMODEL", fileEntry.path)
-            }
-        }
-
+        return folder.listFiles().toList()
     }
 
     fun deleteAllGifs() = viewModelScope.launch {

@@ -10,6 +10,7 @@ import com.bumptech.glide.Glide
 import com.giphyapp.databinding.ActivityFullscreenBinding
 import com.giphyapp.db.GifDatabase
 import com.giphyapp.repository.GifsRepository
+import java.io.File
 
 class FullscreenActivity : AppCompatActivity() {
 
@@ -30,17 +31,20 @@ class FullscreenActivity : AppCompatActivity() {
         supportActionBar?.setDisplayShowHomeEnabled(true)
 
         if(intent.extras!!["url"] != null){
-            binding.btnUpload.visibility = View.INVISIBLE
             Glide.with(this)
                     .load(intent.extras!!["url"])
                     .thumbnail(Glide.with(this).load(intent.extras!!["thumbnail"]))
                     .into(binding.ivGif)
-        }else{
-            Log.e("DOBRO JE", "DOBRO JE")
+        }else if(intent.extras!!["uri"] != null){
             binding.ivGif.setImageURI(intent.extras!!["uri"] as Uri?)
             binding.btnUpload.setOnClickListener {
                 //TODO("CALL UPLOAD")
             }
+        }else{
+            binding.btnUpload.visibility = View.INVISIBLE
+            Glide.with(this)
+                    .load(intent.extras!!["file"] as File)
+                    .into(binding.ivGif)
         }
     }
 
