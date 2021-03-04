@@ -1,8 +1,6 @@
 package com.giphyapp.ui
 
-import android.net.Uri
 import android.os.Bundle
-import android.view.View
 import androidx.appcompat.app.AppCompatActivity
 import com.bumptech.glide.Glide
 import com.giphyapp.databinding.ActivityFullscreenBinding
@@ -20,8 +18,6 @@ class FullscreenActivity : AppCompatActivity() {
 
         setContentView(binding.root)
         setSupportActionBar(binding.toolbar)
-
-         //setupViewModel()
 
         supportActionBar?.setDisplayHomeAsUpEnabled(true)
         supportActionBar?.setDisplayShowHomeEnabled(true)
@@ -42,10 +38,4 @@ class FullscreenActivity : AppCompatActivity() {
         onBackPressed()
         return true
     }
-
-//    private fun setupViewModel() {
-//        val gifsRepository = GifsRepository(GifDatabase(this))
-//        val viewModelProviderFactory = GifsViewModelProviderFactory(application, gifsRepository)
-//        viewModel = ViewModelProvider(this, viewModelProviderFactory).get(GifsViewModel::class.java)
-//    }
 }

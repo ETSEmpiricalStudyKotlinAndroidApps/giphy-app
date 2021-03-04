@@ -1,24 +1,14 @@
 package com.giphyapp.adapters
 
 import android.content.Context
-import android.graphics.drawable.Drawable
-import android.os.Environment
 import android.view.LayoutInflater
 import android.view.ViewGroup
 import androidx.recyclerview.widget.AsyncListDiffer
 import androidx.recyclerview.widget.DiffUtil
 import androidx.recyclerview.widget.RecyclerView
 import com.bumptech.glide.Glide
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.GlideException
-import com.bumptech.glide.load.resource.gif.GifDrawable
-import com.bumptech.glide.request.RequestListener
 import com.giphyapp.databinding.GifItemBinding
-import com.giphyapp.models.Data
 import java.io.File
-import java.io.FileOutputStream
-import java.nio.ByteBuffer
-import com.bumptech.glide.request.target.Target
 
 class FileAdapter(var context: Context) : RecyclerView.Adapter<FileAdapter.FileViewHolder>() {
 
@@ -54,7 +44,6 @@ class FileAdapter(var context: Context) : RecyclerView.Adapter<FileAdapter.FileV
 
             Glide.with(context)
                     .load(file)
-                    //.thumbnail(Glide.with(context).load(file.path))
                     .into(holder.binding.ivGif)
 
             holder.binding.ivGif.setOnClickListener {

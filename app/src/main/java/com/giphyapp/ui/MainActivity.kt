@@ -7,7 +7,6 @@ import android.content.DialogInterface
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.content.res.Configuration
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Bundle
 import android.util.Log
@@ -24,15 +23,10 @@ import androidx.lifecycle.Observer
 import androidx.lifecycle.ViewModelProvider
 import androidx.recyclerview.widget.GridLayoutManager
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.DecodeFormat
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.request.RequestOptions
-import com.bumptech.glide.request.target.CustomTarget
 import com.giphyapp.R
+import com.giphyapp.adapters.FileAdapter
 import com.giphyapp.adapters.GifAdapter
 import com.giphyapp.databinding.ActivityMainBinding
-import com.giphyapp.models.Data
 import com.giphyapp.repository.GifsRepository
 import com.giphyapp.util.Constants.Companion.EMPTY_LAST_PAGE_LOSS
 import com.giphyapp.util.Constants.Companion.GIF_PICK_CODE
@@ -43,14 +37,10 @@ import com.giphyapp.util.Constants.Companion.PERMISSION_CODE_READ_EXTERNAL
 import com.giphyapp.util.Constants.Companion.PERMISSION_CODE_WRITE_EXTERNAL
 import com.giphyapp.util.Resource
 import com.google.android.material.snackbar.Snackbar
-import java.io.File
-import com.bumptech.glide.request.target.Target
-import com.giphyapp.adapters.FileAdapter
 import kotlinx.coroutines.*
 import okhttp3.Response
 import org.json.JSONObject
-import java.io.FileOutputStream
-import java.lang.Exception
+import java.io.File
 import java.net.SocketTimeoutException
 
 
@@ -185,7 +175,7 @@ class MainActivity : AppCompatActivity() {
     private fun setFABListener() {
         binding.fab.setOnClickListener { _ ->
 
-            if(viewModel.hasInternetConnection() == true){
+            if(viewModel.hasInternetConnection()){
                 if(checkSelfPermission(Manifest.permission.READ_EXTERNAL_STORAGE)
                         == PackageManager.PERMISSION_DENIED){
                     var permissions: Array<String> = arrayOf(Manifest.permission.READ_EXTERNAL_STORAGE)
@@ -202,11 +192,11 @@ class MainActivity : AppCompatActivity() {
 
     private fun pickGifFromGallery() {
         // Intent to pick gif from gallery
-        var intent: Intent = Intent(Intent.ACTION_PICK)
+        val intent: Intent = Intent(Intent.ACTION_GET_CONTENT)
 
-        intent.setType("image/*")
+        intent.type = "image/gif"
 
-        startActivityForResult(intent, GIF_PICK_CODE)
+        startActivityForResult(Intent.createChooser(intent, "You will need to pick a gif"), GIF_PICK_CODE)
     }
 
     private fun setupViewModel() {
@@ -253,17 +243,7 @@ class MainActivity : AppCompatActivity() {
         })
     }
 
-    private fun saveListOfGifsOnStorage(data: List<Data>) {
 
-        //Save gifs in DB only one time
-        if(viewModel.firstTimeSavingGifs == true){
-            viewModel.firstTimeSavingGifs = false
-            for(gif in data){
-                saveGifOnStorage(gif.images.downsized
-                        .url)
-            }
-        }
-    }
 
     private fun setupRecyclerView() = binding.rvGifs.apply {
 
@@ -300,77 +280,8 @@ class MainActivity : AppCompatActivity() {
             var permissions: Array<String> = arrayOf(Manifest.permission.WRITE_EXTERNAL_STORAGE)
             requestPermissions(permissions, PERMISSION_CODE_WRITE_EXTERNAL)
         }else{
-            saveListOfGifsOnStorage(gifAdapter.gifs)
+            viewModel.saveListOfGifsOnStorage(gifAdapter.gifs)
         }
-    }
-
-    private fun saveGifOnStorage(url: String) = CoroutineScope(Dispatchers.IO).launch {
-
-        // Getting File object from url
-        Glide.with(this@MainActivity).asFile()
-            .load(url)
-            .apply(
-                RequestOptions()
-                    .diskCacheStrategy(DiskCacheStrategy.DATA)
-                    .format(DecodeFormat.PREFER_ARGB_8888)
-                    .override(Target.SIZE_ORIGINAL)
-            )
-            .into(object : CustomTarget<File?>() {
-                override fun onResourceReady(
-                    resource: File,
-                    transition: com.bumptech.glide.request.transition.Transition<in File?>?
-                ) {
-                    storeImage(resource)
-                }
-
-                override fun onLoadCleared(placeholder: Drawable?) {
-
-                }
-            })
-    }
-
-    private fun storeImage(to: File) {
-
-        // Saving image on storage
-        val dir = File(getExternalFilesDir(null), "Saved_gifs")
-        if(!dir.isDirectory){
-            dir.mkdir()
-        }else if(viewModel.firstTimeLoadingTrending == true){
-            // If the directory exists, delete the directory
-            viewModel.firstTimeLoadingTrending = false
-            deleteRecursive(dir)
-            dir.mkdir()
-        }
-
-        val gifFile = File(dir, System.currentTimeMillis().toString() + "test.gif")
-
-
-        //This point and below is responsible for the write operation
-        var outputStream: FileOutputStream?
-        try {
-            gifFile.createNewFile()
-            //second argument of FileOutputStream constructor indicates whether
-            //to append or create new file if one exists
-            outputStream = FileOutputStream(gifFile, true);
-
-            outputStream.write(to.readBytes());
-            outputStream.flush();
-            outputStream.close();
-
-        } catch (e: Exception){
-            Log.e(TAG, "Something went wrong while saving a gif")
-        }
-    }
-
-    private fun deleteRecursive(storageDir: File) {
-
-        if(storageDir.isDirectory){
-            for(child in storageDir.listFiles()!!){
-                deleteRecursive(child)
-            }
-        }
-
-        storageDir.delete()
     }
 
     // Handle permission result
@@ -378,7 +289,7 @@ class MainActivity : AppCompatActivity() {
 
         when(requestCode){
             PERMISSION_CODE_READ_EXTERNAL -> {
-                if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
                     pickGifFromGallery()
                 } else {
                     Toast
@@ -387,8 +298,8 @@ class MainActivity : AppCompatActivity() {
                 }
             }
             PERMISSION_CODE_WRITE_EXTERNAL -> {
-                if (grantResults.size > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-                    saveListOfGifsOnStorage(gifAdapter.gifs)
+                if (grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                    viewModel.saveListOfGifsOnStorage(gifAdapter.gifs)
                 } else {
                     Toast
                             .makeText(this@MainActivity, "I don't have the permission to access your storage", Toast.LENGTH_SHORT)

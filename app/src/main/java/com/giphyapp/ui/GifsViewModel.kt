@@ -2,34 +2,31 @@ package com.giphyapp.ui
 
 import android.app.Application
 import android.content.Context
+import android.graphics.drawable.Drawable
 import android.net.ConnectivityManager
 import android.net.NetworkCapabilities.*
-import android.os.Build
 import android.util.Log
 import android.widget.Toast
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.MutableLiveData
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.giphyapp.BuildConfig
+import com.bumptech.glide.Glide
+import com.bumptech.glide.load.DecodeFormat
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
+import com.bumptech.glide.request.target.CustomTarget
+import com.bumptech.glide.request.target.Target
 import com.giphyapp.GiphyApplication
+import com.giphyapp.models.Data
 import com.giphyapp.models.GiphyResponse
 import com.giphyapp.repository.GifsRepository
 import com.giphyapp.util.Resource
-import com.google.android.material.snackbar.Snackbar
+import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.OkHttpClient
-import okhttp3.Request
-import okhttp3.RequestBody
-import okhttp3.RequestBody.Companion.asRequestBody
-import okhttp3.logging.HttpLoggingInterceptor
 import retrofit2.Response
 import java.io.File
-import java.util.concurrent.TimeUnit
+import java.io.FileOutputStream
 
 
 class GifsViewModel(
@@ -37,6 +34,7 @@ class GifsViewModel(
         val gifsRepository: GifsRepository
 ) : AndroidViewModel(app) {
 
+    private val TAG = "View Model"
 
     val gifs: MutableLiveData<Resource<GiphyResponse>> = MutableLiveData()
 
@@ -105,6 +103,88 @@ class GifsViewModel(
         }
         return Resource.Error(response.message())
     }
+
+    fun saveListOfGifsOnStorage(data: List<Data>) {
+
+        //Save gifs in DB only one time
+        if(firstTimeSavingGifs == true){
+            firstTimeSavingGifs = false
+            for(gif in data){
+                saveGifOnStorage(gif.images.downsized
+                        .url)
+            }
+        }
+    }
+
+    private fun saveGifOnStorage(url: String) = CoroutineScope(Dispatchers.IO).launch {
+
+        // Getting File object from url
+        Glide.with(getApplication<GiphyApplication>()).asFile()
+                .load(url)
+                .apply(
+                        RequestOptions()
+                                .diskCacheStrategy(DiskCacheStrategy.DATA)
+                                .format(DecodeFormat.PREFER_ARGB_8888)
+                                .override(Target.SIZE_ORIGINAL)
+                )
+                .into(object : CustomTarget<File?>() {
+                    override fun onResourceReady(
+                            resource: File,
+                            transition: com.bumptech.glide.request.transition.Transition<in File?>?
+                    ) {
+                        storeImage(resource)
+                    }
+
+                    override fun onLoadCleared(placeholder: Drawable?) {
+
+                    }
+                })
+    }
+
+    private fun storeImage(to: File) {
+
+        // Saving image on storage
+        val dir = File(getApplication<GiphyApplication>().getExternalFilesDir(null), "Saved_gifs")
+        if(!dir.isDirectory){
+            dir.mkdir()
+        }else if(firstTimeLoadingTrending){
+            // If the directory exists, delete the directory
+            firstTimeLoadingTrending = false
+            deleteRecursive(dir)
+            dir.mkdir()
+        }
+
+        val gifFile = File(dir, System.currentTimeMillis().toString() + "test.gif")
+
+
+        //This point and below is responsible for the write operation
+        val outputStream: FileOutputStream?
+        try {
+            gifFile.createNewFile()
+            //second argument of FileOutputStream constructor indicates whether
+            //to append or create new file if one exists
+            outputStream = FileOutputStream(gifFile, true);
+
+            outputStream.write(to.readBytes());
+            outputStream.flush();
+            outputStream.close();
+
+        } catch (e: Exception){
+            Log.e(TAG, "Something went wrong while saving a gif")
+        }
+    }
+
+    private fun deleteRecursive(storageDir: File) {
+
+        if(storageDir.isDirectory){
+            for(child in storageDir.listFiles()!!){
+                deleteRecursive(child)
+            }
+        }
+
+        storageDir.delete()
+    }
+
 
     fun hasInternetConnection(): Boolean {
         val connectivityManager = getApplication<GiphyApplication>().getSystemService(

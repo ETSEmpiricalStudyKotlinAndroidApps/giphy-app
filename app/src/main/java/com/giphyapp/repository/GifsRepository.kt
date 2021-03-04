@@ -4,6 +4,7 @@ import com.giphyapp.BuildConfig
 import com.giphyapp.api.RetrofitInstance
 import com.giphyapp.models.GiphyResponse
 import com.giphyapp.util.Constants.Companion.NUMBER_OF_GIFS_ON_PAGE
+import com.giphyapp.util.Constants.Companion.UPLOAD_BASE_URL
 import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.OkHttpClient
@@ -50,7 +51,7 @@ class GifsRepository(
             .build()
 
         val request = Request.Builder()
-            .url("https://upload.giphy.com/v1/gifs?api_key=" + BuildConfig.GiphySecAPIKey)
+            .url( UPLOAD_BASE_URL + "/v1/gifs?api_key=" + BuildConfig.GiphySecAPIKey)
             .method("POST", body)
             .build()
 
